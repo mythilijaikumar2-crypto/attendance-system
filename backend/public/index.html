@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NxtSync – Login</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="login-container">
+    <!-- Logo -->
+    <div class="logo-box">
+        <img src="./logo.jpg" alt="NxtSync Logo">
+    </div>
+    <!-- Unified Login Box -->
+    <div class="login-box" id="unifiedLoginBox">
+        <h2>Login</h2>
+        <form id="unifiedLoginForm">
+            <div class="input-group">
+                <i class="fas fa-id-card"></i>
+                <input type="text" name="username" placeholder="Enter Employee/Admin ID" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" name="password" id="passwordInput" placeholder="Enter Password" required autocomplete="current-password">
+                <span class="toggle-password" onclick="togglePasswordView()">
+                    <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                </span>
+            </div>
+            <button type="submit" class="login-btn">Login</button>
+        </form>
+    </div>
+
+</div>
+
+
+
+<script src="./login-script.js"></script>
+
+</body>
+</html>
