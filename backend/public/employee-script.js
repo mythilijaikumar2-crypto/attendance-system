@@ -58,7 +58,7 @@ document.querySelectorAll('.sidebar .nav-list .nav-item a').forEach(link => {
     if (sectionId === 'attendance') sectionId = 'profile';
 
     // show the selected section
-    document.querySelectorAll('.content-section').forEach(function(s){s.classList.remove('active');});
+    document.querySelectorAll('.content-section').forEach(function (s) { s.classList.remove('active'); });
     var target = document.getElementById(sectionId);
     if (target) {
       target.classList.add('active');
@@ -70,7 +70,7 @@ document.querySelectorAll('.sidebar .nav-list .nav-item a').forEach(link => {
     }
 
     // update active item
-    document.querySelectorAll('.sidebar .nav-list .nav-item').forEach(function(i){i.classList.remove('active');});
+    document.querySelectorAll('.sidebar .nav-list .nav-item').forEach(function (i) { i.classList.remove('active'); });
     this.parentElement.classList.add('active');
 
     // update breadcrumb .current element if present
@@ -86,112 +86,112 @@ document.querySelectorAll('.sidebar .nav-list .nav-item a').forEach(link => {
 
 // Attach logout modal only to the actual logout link, not Settings or others
 document.addEventListener('DOMContentLoaded', () => {
-        // Sidebar Logout link logic
-        var sidebarLogoutLink = document.getElementById('sidebarLogoutLink');
-        if (sidebarLogoutLink) {
-          sidebarLogoutLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            var modal = document.getElementById('logoutModal');
-            if (modal) {
-              modal.classList.remove('hidden');
-              modal.style.display = 'flex';
-            }
-          });
+  // Sidebar Logout link logic
+  var sidebarLogoutLink = document.getElementById('sidebarLogoutLink');
+  if (sidebarLogoutLink) {
+    sidebarLogoutLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      var modal = document.getElementById('logoutModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+      }
+    });
+  }
+  // Resignation Request Form Logic (Employee Workflow)
+  // Resignation Modal Helper Functions
+  const resignationModal = document.getElementById('resignationRequestModal');
+  const openResignationBtn = document.getElementById('openResignationModalBtn');
+  const closeResignationBtn = document.getElementById('closeResignationModalBtn');
+  const resignationForm = document.getElementById('resignationForm');
+  const resignationStatus = document.getElementById('resignationStatus');
+
+  function closeResignationModal() {
+    if (resignationModal) {
+      resignationModal.classList.add('hidden');
+      resignationModal.classList.remove('active');
+    }
+  }
+
+  function openResignationModal() {
+    if (resignationModal) {
+      // Clear the form and status when opening
+      if (resignationForm) resignationForm.reset();
+      if (resignationStatus) resignationStatus.innerHTML = '';
+
+      resignationModal.classList.remove('hidden');
+      resignationModal.classList.add('active');
+      // Load status when opening the modal
+      loadResignationStatus();
+    }
+  }
+
+  if (openResignationBtn) {
+    openResignationBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      openResignationModal();
+    });
+  }
+
+  if (closeResignationBtn) {
+    closeResignationBtn.onclick = closeResignationModal;
+  }
+
+  // Resignation Request Form Logic (Employee Workflow - Kept same IDs)
+  if (resignationForm) {
+    resignationForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      resignationStatus.innerHTML = '<div class="resign-loader">Submitting...</div>';
+
+      // Disable submit button to prevent double-submission
+      const submitBtn = this.querySelector('.submit-btn');
+      if (submitBtn) submitBtn.disabled = true;
+
+      const formData = new FormData(resignationForm);
+      const user = JSON.parse(localStorage.getItem('nxt_user'));
+      if (!user || !user.empId) {
+        resignationStatus.innerHTML = '<div class="resign-error">User not logged in.</div>';
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+      }
+      formData.append('empId', user.empId);
+      try {
+        const res = await fetch(`${API_BASE}/api/resignations/submit`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${localStorage.getItem('nxt_token')}` },
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          resignationStatus.innerHTML = '<div class="resign-success">Resignation submitted! Status: Pending. Closing in 3 seconds...</div>';
+          loadResignationStatus();
+
+          // Automatically close the modal after a successful submission delay
+          setTimeout(closeResignationModal, 3000);
+
+        } else {
+          resignationStatus.innerHTML = '<div class="resign-error">' + (data.message || 'Error submitting resignation') + '</div>';
         }
-      // Resignation Request Form Logic (Employee Workflow)
-// Resignation Modal Helper Functions
-      const resignationModal = document.getElementById('resignationRequestModal');
-      const openResignationBtn = document.getElementById('openResignationModalBtn');
-      const closeResignationBtn = document.getElementById('closeResignationModalBtn');
-      const resignationForm = document.getElementById('resignationForm');
-      const resignationStatus = document.getElementById('resignationStatus');
-
-      function closeResignationModal() {
-          if (resignationModal) {
-              resignationModal.classList.add('hidden');
-              resignationModal.classList.remove('active');
-          }
+      } catch (err) {
+        resignationStatus.innerHTML = '<div class="resign-error">Server error</div>';
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
       }
-
-      function openResignationModal() {
-          if (resignationModal) {
-              // Clear the form and status when opening
-              if (resignationForm) resignationForm.reset();
-              if (resignationStatus) resignationStatus.innerHTML = '';
-              
-              resignationModal.classList.remove('hidden');
-              resignationModal.classList.add('active');
-              // Load status when opening the modal
-              loadResignationStatus();
-          }
+    });
+  }
+  async function loadResignationStatus() {
+    if (!resignationStatus) return;
+    resignationStatus.innerHTML = '<div class="resign-loader">Loading status...</div>';
+    try {
+      const res = await fetch('/api/resignations/my', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('nxt_token')}` }
+      });
+      const data = await res.json();
+      if (!Array.isArray(data) || !data.length) {
+        resignationStatus.innerHTML = '<div class="resign-empty">No resignation requests found.</div>';
+        return;
       }
-
-      if (openResignationBtn) {
-        openResignationBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          openResignationModal();
-        });
-      }
-
-      if (closeResignationBtn) {
-        closeResignationBtn.onclick = closeResignationModal;
-      }
-
-      // Resignation Request Form Logic (Employee Workflow - Kept same IDs)
-      if (resignationForm) {
-        resignationForm.addEventListener('submit', async function(e) {
-          e.preventDefault();
-          resignationStatus.innerHTML = '<div class="resign-loader">Submitting...</div>';
-          
-          // Disable submit button to prevent double-submission
-          const submitBtn = this.querySelector('.submit-btn');
-          if (submitBtn) submitBtn.disabled = true;
-
-          const formData = new FormData(resignationForm);
-          const user = JSON.parse(localStorage.getItem('nxt_user'));
-          if (!user || !user.empId) {
-            resignationStatus.innerHTML = '<div class="resign-error">User not logged in.</div>';
-            if (submitBtn) submitBtn.disabled = false;
-            return;
-          }
-          formData.append('empId', user.empId);
-          try {
-            const res = await fetch(`${API_BASE}/api/resignations/submit`, {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${localStorage.getItem('nxt_token')}` },
-              body: formData
-            });
-            const data = await res.json();
-            if (data.success) {
-              resignationStatus.innerHTML = '<div class="resign-success">Resignation submitted! Status: Pending. Closing in 3 seconds...</div>';
-              loadResignationStatus();
-              
-              // Automatically close the modal after a successful submission delay
-              setTimeout(closeResignationModal, 3000);
-
-            } else {
-              resignationStatus.innerHTML = '<div class="resign-error">' + (data.message || 'Error submitting resignation') + '</div>';
-            }
-          } catch (err) {
-            resignationStatus.innerHTML = '<div class="resign-error">Server error</div>';
-          } finally {
-            if (submitBtn) submitBtn.disabled = false;
-          }
-        });
-      }
-      async function loadResignationStatus() {
-        if (!resignationStatus) return;
-        resignationStatus.innerHTML = '<div class="resign-loader">Loading status...</div>';
-        try {
-          const res = await fetch('/api/resignations/my', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('nxt_token')}` }
-          });
-          const data = await res.json();
-          if (!Array.isArray(data) || !data.length) {
-            resignationStatus.innerHTML = '<div class="resign-empty">No resignation requests found.</div>';
-            return;
-          }
-          resignationStatus.innerHTML = data.map(r => `
+      resignationStatus.innerHTML = data.map(r => `
             <div class="resign-history-card ${r.status}">
               <div class="resign-row"><b>Status:</b> <span class="resign-status">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span></div>
               <div class="resign-row"><b>Submitted:</b> ${new Date(r.submittedAt).toLocaleDateString()}</div>
@@ -201,38 +201,38 @@ document.addEventListener('DOMContentLoaded', () => {
               ${r.feedback ? `<div class="resign-row"><b>HR Feedback:</b> ${r.feedback}</div>` : ''}
             </div>
           `).join('');
-        } catch (err) {
-          resignationStatus.innerHTML = '<div class="resign-error">Error loading status</div>';
-        }
+    } catch (err) {
+      resignationStatus.innerHTML = '<div class="resign-error">Error loading status</div>';
+    }
+  }
+  // Actions section: handle Resignation Request and Logout options
+
+  // Actions section navigation: show Actions section when clicked
+  var actionsNavLink = document.querySelector('.sidebar .nav-list .nav-item a[href="#actions"]');
+  if (actionsNavLink) {
+    actionsNavLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      document.querySelectorAll('.content-section').forEach(function (s) { s.classList.remove('active'); });
+      var actionsSection = document.getElementById('actions');
+      if (actionsSection) actionsSection.classList.add('active');
+      var crumb = document.querySelector('.breadcrumb .current');
+      if (crumb) crumb.innerText = 'Actions';
+    });
+  }
+
+  // Resignation form submit is already handled above (see resignationForm event listener)
+
+  var actionsLogoutLink = document.getElementById('actionsLogoutLink');
+  if (actionsLogoutLink) {
+    actionsLogoutLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      var modal = document.getElementById('logoutModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
       }
-    // Actions section: handle Resignation Request and Logout options
-
-    // Actions section navigation: show Actions section when clicked
-    var actionsNavLink = document.querySelector('.sidebar .nav-list .nav-item a[href="#actions"]');
-    if (actionsNavLink) {
-      actionsNavLink.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.querySelectorAll('.content-section').forEach(function(s){s.classList.remove('active');});
-        var actionsSection = document.getElementById('actions');
-        if (actionsSection) actionsSection.classList.add('active');
-        var crumb = document.querySelector('.breadcrumb .current');
-        if (crumb) crumb.innerText = 'Actions';
-      });
-    }
-
-    // Resignation form submit is already handled above (see resignationForm event listener)
-
-    var actionsLogoutLink = document.getElementById('actionsLogoutLink');
-    if (actionsLogoutLink) {
-      actionsLogoutLink.addEventListener('click', function(e) {
-        e.preventDefault();
-        var modal = document.getElementById('logoutModal');
-        if (modal) {
-          modal.classList.remove('hidden');
-          modal.style.display = 'flex';
-        }
-      });
-    }
+    });
+  }
   // Modal logic
   const modal = document.getElementById('logoutModal');
   const confirmBtn = document.getElementById('confirmLogoutBtn');
@@ -242,12 +242,12 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.style.display = 'none';
   }
   if (modal && confirmBtn && cancelBtn) {
-    confirmBtn.onclick = function() {
+    confirmBtn.onclick = function () {
       localStorage.removeItem('nxt_token');
       localStorage.removeItem('nxt_user');
       window.location = './index.html';
     };
-    cancelBtn.onclick = function() {
+    cancelBtn.onclick = function () {
       modal.classList.add('hidden');
       modal.style.display = 'none';
     };
@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
       (icon && icon.classList.contains('fa-sign-out-alt')) ||
       text === 'logout'
     ) {
-      link.addEventListener('click', function(e) {
+      link.addEventListener('click', function (e) {
         e.preventDefault();
         if (modal) {
           modal.classList.remove('hidden');
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { label: 'Reports', action: () => loadSectionContent('reports') }
   ];
 
-  searchInput.addEventListener('input', function() {
+  searchInput.addEventListener('input', function () {
     const val = this.value.trim().toLowerCase();
     if (!val) {
       searchDropdown.classList.remove('active');
@@ -389,83 +389,83 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   // Hide dropdown on blur
-  searchInput.addEventListener('blur', function() {
+  searchInput.addEventListener('blur', function () {
     setTimeout(() => searchDropdown.classList.remove('active'), 150);
   });
 });
-  // --- Quick Actions: Real-Time Clock and Clock In/Out ---
-  function updateRealTimeClock() {
-    const clock = document.getElementById('realTimeClock');
-    if (clock) {
-      const now = new Date();
-      clock.textContent = now.toLocaleTimeString();
-    }
+// --- Quick Actions: Real-Time Clock and Clock In/Out ---
+function updateRealTimeClock() {
+  const clock = document.getElementById('realTimeClock');
+  if (clock) {
+    const now = new Date();
+    clock.textContent = now.toLocaleTimeString();
   }
-  setInterval(updateRealTimeClock, 1000);
-  updateRealTimeClock();
+}
+setInterval(updateRealTimeClock, 1000);
+updateRealTimeClock();
 
-  // Clock In/Out Button Logic
-  const clockInOutBtn = document.getElementById('clockInOutBtn');
-  const clockInOutText = document.getElementById('clockInOutText');
-  if (clockInOutBtn && clockInOutText) {
-    // Fetch current status on load
-    fetchWithAuth('/api/attendance/status', { credentials: 'include' })
+// Clock In/Out Button Logic
+const clockInOutBtn = document.getElementById('clockInOutBtn');
+const clockInOutText = document.getElementById('clockInOutText');
+if (clockInOutBtn && clockInOutText) {
+  // Fetch current status on load
+  fetchWithAuth('/api/attendance/status', { credentials: 'include' })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.status === 'in') {
+        clockInOutText.textContent = 'Clock Out';
+      } else {
+        clockInOutText.textContent = 'Clock In';
+      }
+    });
+
+  clockInOutBtn.addEventListener('click', () => {
+    // Use correct backend endpoint names
+    const user = JSON.parse(localStorage.getItem('nxt_user'));
+    if (!user || !user.empId) {
+      alert('User not found');
+      return;
+    }
+    const action = clockInOutText.textContent === 'Clock In' ? 'checkin' : 'checkout';
+    fetchWithAuth(`/api/attendance/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ empId: user.empId }),
+      credentials: 'include'
+    })
       .then(res => res.json())
       .then(data => {
-        if (data && data.status === 'in') {
-          clockInOutText.textContent = 'Clock Out';
+        if (data.success || data._id) {
+          clockInOutText.textContent = action === 'checkin' ? 'Clock Out' : 'Clock In';
+          // Optionally refresh widgets or show a toast
         } else {
-          clockInOutText.textContent = 'Clock In';
+          alert(data.message || 'Operation failed.');
         }
-      });
-
-    clockInOutBtn.addEventListener('click', () => {
-      // Use correct backend endpoint names
-      const user = JSON.parse(localStorage.getItem('nxt_user'));
-      if (!user || !user.empId) {
-        alert('User not found');
-        return;
-      }
-      const action = clockInOutText.textContent === 'Clock In' ? 'checkin' : 'checkout';
-      fetchWithAuth(`/api/attendance/${action}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ empId: user.empId }),
-        credentials: 'include'
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success || data._id) {
-            clockInOutText.textContent = action === 'checkin' ? 'Clock Out' : 'Clock In';
-            // Optionally refresh widgets or show a toast
-          } else {
-            alert(data.message || 'Operation failed.');
-          }
-        })
-        .catch(() => alert('Network error.'));
-    });
-  }
+      .catch(() => alert('Network error.'));
+  });
+}
 
-  // Quick Action Option Buttons
-  const viewAttendanceBtn = document.getElementById('viewAttendanceBtn');
-  if (viewAttendanceBtn) {
-    viewAttendanceBtn.addEventListener('click', () => {
-      // Navigate to attendance section
-      if (typeof showSection === 'function') showSection('attendance');
-    });
-  }
-  const requestLeaveBtn = document.getElementById('requestLeaveBtn');
-  if (requestLeaveBtn) {
-    requestLeaveBtn.addEventListener('click', () => {
-      if (typeof showSection === 'function') showSection('leaves');
-    });
-  }
-  const helpDeskBtn = document.getElementById('helpDeskBtn');
-  if (helpDeskBtn) {
-    helpDeskBtn.addEventListener('click', () => {
-      alert('Contact HR or support@example.com for help.');
-    });
-  }
+// Quick Action Option Buttons
+const viewAttendanceBtn = document.getElementById('viewAttendanceBtn');
+if (viewAttendanceBtn) {
+  viewAttendanceBtn.addEventListener('click', () => {
+    // Navigate to attendance section
+    if (typeof showSection === 'function') showSection('attendance');
+  });
+}
+const requestLeaveBtn = document.getElementById('requestLeaveBtn');
+if (requestLeaveBtn) {
+  requestLeaveBtn.addEventListener('click', () => {
+    if (typeof showSection === 'function') showSection('leaves');
+  });
+}
+const helpDeskBtn = document.getElementById('helpDeskBtn');
+if (helpDeskBtn) {
+  helpDeskBtn.addEventListener('click', () => {
+    alert('Contact HR or support@example.com for help.');
+  });
+}
 
 // Fetch real clock status from backend and update UI
 async function fetchAndSetClockStatus() {
@@ -527,7 +527,7 @@ async function fetchAndSetClockStatus() {
 function initClockButton() {
   const btn = document.getElementById('clockButton');
   if (!btn) return;
-  btn.addEventListener('click', async function() {
+  btn.addEventListener('click', async function () {
     // Always fetch backend status to determine action
     const user = JSON.parse(localStorage.getItem('nxt_user'));
     if (!user) {
@@ -707,11 +707,11 @@ function showSelfieModal(onConfirm) {
     const file = fileInput.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
       preview.src = e.target.result;
       preview.style.display = '';
       imageBlob = file;
-      collectSelfieMeta(file, function(metaResult) {
+      collectSelfieMeta(file, function (metaResult) {
         meta = metaResult;
         confirmBtns.style.display = '';
         startCameraBtn.style.display = 'none';
@@ -732,7 +732,7 @@ function showSelfieModal(onConfirm) {
         stream.getTracks().forEach(track => track.stop());
         stream = null;
       }
-      collectSelfieMeta(blob, function(metaResult) {
+      collectSelfieMeta(blob, function (metaResult) {
         meta = metaResult;
         confirmBtns.style.display = '';
         captureBtns.style.display = 'none';
@@ -763,10 +763,10 @@ function showSelfieModal(onConfirm) {
     } else if (meta.timestamp) {
       metaTime = new Date(meta.timestamp).getTime();
     }
-    if (metaTime && Math.abs(now - metaTime) > 5 * 60 * 1000) {
-      alert('Photo capture time is too far from current time. Please use a recent photo.');
-      return;
-    }
+    // if (metaTime && Math.abs(now - metaTime) > 24 * 60 * 60 * 1000) {
+    //   alert('Photo capture time is too far from current time. Please use a recent photo (within 24 hours).');
+    //   return;
+    // }
     // Validation: require GPS if mandatory (set to true to enforce)
     const requireGPS = false; // set to true if GPS is mandatory
     if (requireGPS && !(meta.gps || meta.geo)) {
@@ -816,42 +816,44 @@ function collectSelfieMeta(fileOrBlob, callback) {
     resolution: '',
     capturedAt: '',
   };
+
   if (fileOrBlob && window.EXIF) {
     try {
-      const reader = new FileReader();
-      reader.onload = function(e) {
+      // EXIF.getData supports standard File/Blob objects directly
+      EXIF.getData(fileOrBlob, function () {
         try {
-          EXIF.getData({
-            src: e.target.result,
-            arrayBuffer: e.target.result
-          }, function() {
-            meta.exif = EXIF.getAllTags(this);
-            if (meta.exif.DateTimeOriginal) meta.capturedAt = meta.exif.DateTimeOriginal;
-            if (meta.exif.Model) meta.deviceModel = meta.exif.Model;
-            if (meta.exif.GPSLatitude && meta.exif.GPSLongitude) {
+          // 'this' refers to the file object with extracted metadata
+          const tags = EXIF.getAllTags(this);
+          if (tags) {
+            meta.exif = tags;
+            if (tags.DateTimeOriginal) meta.capturedAt = tags.DateTimeOriginal;
+            if (tags.Model) meta.deviceModel = tags.Model;
+
+            if (tags.GPSLatitude && tags.GPSLongitude) {
               // Convert GPS to decimal
               function dmsToDecimal(dms, ref) {
-                let d = dms[0], m = dms[1], s = dms[2];
-                let dec = d + m/60 + s/3600;
+                if (!dms) return 0;
+                let d = dms[0] || 0, m = dms[1] || 0, s = dms[2] || 0;
+                let dec = d + m / 60 + s / 3600;
                 if (ref === 'S' || ref === 'W') dec = -dec;
                 return dec;
               }
               meta.gps = {
-                lat: dmsToDecimal(meta.exif.GPSLatitude, meta.exif.GPSLatitudeRef),
-                lon: dmsToDecimal(meta.exif.GPSLongitude, meta.exif.GPSLongitudeRef)
+                lat: dmsToDecimal(tags.GPSLatitude, tags.GPSLatitudeRef),
+                lon: dmsToDecimal(tags.GPSLongitude, tags.GPSLongitudeRef)
               };
             }
-            if (meta.exif.PixelXDimension && meta.exif.PixelYDimension) {
-              meta.resolution = `${meta.exif.PixelXDimension}x${meta.exif.PixelYDimension}`;
+            if (tags.PixelXDimension && tags.PixelYDimension) {
+              meta.resolution = `${tags.PixelXDimension}x${tags.PixelYDimension}`;
             }
-            callback(meta);
-          });
-        } catch (err) {
-          callback(meta);
+          }
+        } catch (e) {
+          console.warn('Error parsing EXIF tags', e);
         }
-      };
-      reader.readAsArrayBuffer(fileOrBlob);
+        callback(meta);
+      });
     } catch (err) {
+      console.warn('EXIF.getData failed', err);
       callback(meta);
     }
   } else {
@@ -995,7 +997,7 @@ async function loadDashboard() {
 
   // Attach event listeners for attendance rate chart buttons
   document.querySelectorAll('.chart-card .chart-btn').forEach(btn => {
-    btn.addEventListener('click', async function() {
+    btn.addEventListener('click', async function () {
       const group = this.closest('.chart-card');
       const header = group.querySelector('.chart-header h3').innerText.toLowerCase();
       const period = this.dataset.period;
@@ -1019,7 +1021,7 @@ async function loadProfile() {
   if (!sec) return;
   sec.innerHTML = `<div class="dashboard-content"><h2>Loading profile…</h2></div>`;
   try {
-    const res = await fetch(`${API_BASE}/api/auth/me`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/auth/me`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) {
       sec.innerHTML = `<div class="dashboard-content"><h2>Unable to load profile</h2></div>`;
       return;
@@ -1131,7 +1133,7 @@ async function loadMyLeaves() {
   if (!container) return;
   container.innerHTML = `<div style="text-align:center;color:var(--primary-color);"><i class="fas fa-spinner fa-spin"></i> Loading your leave requests...</div>`;
   try {
-    const res = await fetch(`${API_BASE}/api/leaves/my`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/leaves/my`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) {
       container.innerHTML = `<div style="text-align:center;color:var(--primary-color);margin-top:1.5rem;"><i class="fas fa-info-circle"></i> No leave history available.</div>`;
       return;
@@ -1148,7 +1150,7 @@ async function loadMyLeaves() {
       d.innerHTML = `
         <span class="leave-request-icon"><i class="fas fa-calendar-alt"></i></span>
         <div class="leave-request-info">
-          <div class="leave-request-dates">${l.startDate.substring(0,10)} → ${l.endDate.substring(0,10)}</div>
+          <div class="leave-request-dates">${l.startDate.substring(0, 10)} → ${l.endDate.substring(0, 10)}</div>
           <div>${l.reason || ''}</div>
         </div>
         <span class="leave-request-status">${l.status}</span>
@@ -1199,7 +1201,7 @@ async function loadAdminMessages() {
       container.innerHTML = `<div class="report-empty">User not found.</div>`;
       return;
     }
-    const res = await fetch(`${API_BASE}/api/messages/${user.empId}`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/messages/${user.empId}`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) {
       container.innerHTML = `<div class="report-empty">No messages found.</div>`;
       return;
@@ -1268,7 +1270,7 @@ async function loadLeaveReports() {
   if (!container) return;
   container.innerHTML = `<div style="text-align:center;color:var(--primary-color);"><i class="fas fa-spinner fa-spin"></i> Loading leave reports...</div>`;
   try {
-    const res = await fetch(`${API_BASE}/api/leaves/my`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/leaves/my`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) {
       container.innerHTML = `<div style="text-align:center;color:var(--primary-color);margin-top:1.5rem;"><i class="fas fa-info-circle"></i> No leave report data available.</div>`;
       return;
@@ -1332,7 +1334,7 @@ function reportLeaveCard(l, status) {
     <div class="report-leave-card">
       <span class="report-leave-icon"><i class="fas ${icon}"></i></span>
       <div class="report-leave-info">
-        <div class="report-leave-dates">${l.startDate.substring(0,10)} → ${l.endDate.substring(0,10)}</div>
+        <div class="report-leave-dates">${l.startDate.substring(0, 10)} → ${l.endDate.substring(0, 10)}</div>
         <div class="report-leave-reason">${l.reason || ''}</div>
       </div>
       <span class="report-leave-badge ${badge}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>

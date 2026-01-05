@@ -53,9 +53,9 @@ const clockInWithSelfie = async (req, res) => {
     } else if (meta.timestamp) {
       metaTime = new Date(meta.timestamp).getTime();
     }
-    if (metaTime && Math.abs(now - metaTime) > 5 * 60 * 1000) {
-      return res.status(400).json({ message: 'Photo capture time is too far from server time. Please use a recent photo.' });
-    }
+    // if (metaTime && Math.abs(now - metaTime) > 24 * 60 * 60 * 1000) {
+    //   return res.status(400).json({ message: 'Photo capture time is too far from server time. Please use a recent photo (within 24 hours).' });
+    // }
     // 3. Require GPS if mandatory
     const requireGPS = false; // set to true if GPS is mandatory
     if (requireGPS && !(meta.gps || meta.geo)) {
@@ -501,7 +501,7 @@ const Employee = require('../models/Employee');
 const exportDailyExcel = async (req, res) => {
   try {
     const today = new Date();
-    today.setHours(0,0,0,0);
+    today.setHours(0, 0, 0, 0);
     const records = await Attendance.find({ date: today }).populate('employee');
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Daily Attendance');
@@ -539,5 +539,7 @@ const exportDepartmentPDF = (req, res) => { res.status(501).send('Not implemente
 const exportLateExcel = (req, res) => { res.status(501).send('Not implemented'); };
 const exportLatePDF = (req, res) => { res.status(501).send('Not implemented'); };
 
-module.exports = { checkIn, checkOut, summaryToday, getStatus, lateMembersToday, presentTodayList, absentTodayList, checkInSelfie, uploadSelfie, getMonthlySummary, getDepartmentSummary, clockInWithSelfie, uploadClockInSelfie,
-  exportDailyExcel, exportDailyPDF, exportMonthlyExcel, exportMonthlyPDF, exportDepartmentExcel, exportDepartmentPDF, exportLateExcel, exportLatePDF };
+module.exports = {
+  checkIn, checkOut, summaryToday, getStatus, lateMembersToday, presentTodayList, absentTodayList, checkInSelfie, uploadSelfie, getMonthlySummary, getDepartmentSummary, clockInWithSelfie, uploadClockInSelfie,
+  exportDailyExcel, exportDailyPDF, exportMonthlyExcel, exportMonthlyPDF, exportDepartmentExcel, exportDepartmentPDF, exportLateExcel, exportLatePDF
+};
