@@ -27,7 +27,7 @@ const API_BASE = "http://localhost:4000";   // Backend URL
 
 
 // Attach event listener for unified login form
-window.onload = function() {
+window.onload = function () {
     const form = document.getElementById('unifiedLoginForm');
     if (form) {
         form.addEventListener('submit', loginHandlerUnified);
@@ -84,4 +84,34 @@ async function loginHandlerUnified(event) {
 //     } else {
 //         window.location.href = "employee.html";
 //     }
+// ...existing code...
 // })();
+
+
+/* ================= MOUSE GLOW EFFECT ================= */
+(function initMouseGlow() {
+    // Create glow element
+    const glow = document.createElement('div');
+    glow.classList.add('mouse-glow');
+    document.body.appendChild(glow);
+
+    // Track mouse
+    let mouseX = 0, mouseY = 0;
+    let currentX = 0, currentY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+    });
+
+    // Smooth follow
+    function animate() {
+        // Linear interpolation for smoothness
+        currentX += (mouseX - currentX) * 0.1;
+        currentY += (mouseY - currentY) * 0.1;
+
+        glow.style.transform = `translate(${currentX}px, ${currentY}px) translate(-50%, -50%)`;
+        requestAnimationFrame(animate);
+    }
+    animate();
+})();

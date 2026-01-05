@@ -30,7 +30,7 @@ const login = async (req, res) => {
 // GET /api/auth/me
 const me = async (req, res) => {
   try {
-    const user = await Employee.findById(req.user._id).select('-password');
+    const user = await Employee.findById(req.user._id).select('-password').populate('department');
     if (!user) return res.status(404).json({ message: 'User not found' });
     return res.json(user);
   } catch (err) {

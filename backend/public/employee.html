@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NxtSync - Attendance Dashboard</title>
     <link rel="stylesheet" href="./employee-style.css" onerror="console.error('Failed to load CSS: ' + this.href)">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" onerror="console.error('Failed to load CSS: ' + this.href)">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" onerror="console.error('Failed to load CSS: ' + this.href)">
-<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        onerror="console.error('Failed to load CSS: ' + this.href)">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" onerror="console.error('Failed to load CSS: ' + this.href)">
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 </head>
+
 <body>
     <div class="dashboard-container">
         <div class="mobile-menu-overlay" id="mobileMenuOverlay">
@@ -119,30 +123,34 @@
             </nav>
             <div class="sidebar-footer">
                 <div class="user-profile">
-                                        <i class="fas fa-user-circle profile-icon"></i>
-                                        <div class="profile-info">
-                                                <p class="profile-name">John Doe</p>
-                                                <p class="profile-role">Employee</p>
-                                        </div>
-                                        <div class="profile-illus">
-                                            <svg width="60" height="60" viewBox="0 0 60 60" fill="none"><circle cx="30" cy="30" r="28" fill="#6366f1"/><path d="M20 40c0-5 10-5 10-5s10 0 10 5v2H20v-2Z" fill="#fff"/><circle cx="30" cy="28" r="5" fill="#fff"/></svg>
-                                        </div>
+                    <i class="fas fa-user-circle profile-icon"></i>
+                    <div class="profile-info">
+                        <p class="profile-name">John Doe</p>
+                        <p class="profile-role">Employee</p>
+                    </div>
+                    <div class="profile-illus">
+                        <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+                            <circle cx="30" cy="30" r="28" fill="#6366f1" />
+                            <path d="M20 40c0-5 10-5 10-5s10 0 10 5v2H20v-2Z" fill="#fff" />
+                            <circle cx="30" cy="28" r="5" fill="#fff" />
+                        </svg>
+                    </div>
                 </div>
             </div>
         </aside>
 
         <main class="main-content">
-                        <!-- Logout Confirmation Modal -->
-                        <div id="logoutModal" class="modal-overlay hidden">
-                            <div class="modal-content">
-                                <h2>Confirm Logout</h2>
-                                <p>Are you sure you want to log out?</p>
-                                <div class="modal-actions">
-                                    <button id="confirmLogoutBtn" class="modal-btn confirm">Yes, Logout</button>
-                                    <button id="cancelLogoutBtn" class="modal-btn cancel">Cancel</button>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Logout Confirmation Modal -->
+            <div id="logoutModal" class="modal-overlay hidden">
+                <div class="modal-content">
+                    <h2>Confirm Logout</h2>
+                    <p>Are you sure you want to log out?</p>
+                    <div class="modal-actions">
+                        <button id="confirmLogoutBtn" class="modal-btn confirm">Yes, Logout</button>
+                        <button id="cancelLogoutBtn" class="modal-btn cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
             <header class="top-header">
                 <div class="header-left">
                     <button class="menu-toggle" id="menuToggle" title="Toggle menu">
@@ -165,7 +173,7 @@
                     </div>
                 </div>
             </header>
-            
+
             <div id="main-content-area" class="main-content-area">
                 <div id="dashboard" class="content-section active">
                     <div class="dashboard-content">
@@ -176,7 +184,7 @@
                             </div>
                             <div class="dashboard-widgets">
                                 <div class="widget-card clock-widget">
-                                            <h1>Time</h1>
+                                    <h1>Time</h1>
                                     <div class="widget-value" id="currentTime">--:-- --</div>
                                 </div>
                                 <div class="widget-card week-widget">
@@ -298,99 +306,112 @@
                                     <a href="#" class="view-all">View All <i class="fas fa-chevron-right"></i></a>
                                 </div>
                                 <div class="activity-list" id="activityList">
-                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-<!-- PROFILE PAGE SECTION -->
-<div id="profile" class="content-section"></div>
+                <!-- PROFILE PAGE SECTION -->
+                <div id="profile" class="content-section"></div>
 
-                                    </div>
+            </div>
 
-<div id="leave" class="content-section"></div>
-
-
-<!-- REPORTS SECTION -->
-<div id="reports" class="content-section"></div>
-
-<!-- ACTIONS SECTION -->
-<div id="actions" class="content-section">
-    <div class="dashboard-content actions-section">
-        <h2>Actions</h2>
-        <ul class="actions-list">
-            <li>
-                <a href="#" id="openResignationModalBtn" class="quick-action-btn">
-                    <i class="fas fa-file-signature"></i>
-                    <span>Resignation Request</span>
-                </a>
-            </li>
-        </ul>
-    </div>
-</div>
-
-<!-- SETTINGS SECTION -->
+            <div id="leave" class="content-section"></div>
 
 
+            <!-- REPORTS SECTION -->
+            <div id="reports" class="content-section"></div>
 
-
+            <!-- ACTIONS SECTION -->
+            <div id="actions" class="content-section">
+                <div class="dashboard-content actions-section">
+                    <h2>Actions</h2>
+                    <ul class="actions-list">
+                        <li>
+                            <a href="#" id="openResignationModalBtn" class="quick-action-btn">
+                                <i class="fas fa-file-signature"></i>
+                                <span>Resignation Request</span>
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             </div>
-        </main>
-    </div>
-</div>
 
-<!-- Selfie Capture Modal -->
-<div id="selfieModal" class="modal-overlay selfie-modal hidden">
-    <div class="modal-content selfie-modal-content">
-        <h2>Take a Selfie to Clock In</h2>
-        <video id="selfieVideo" width="320" height="240" autoplay class="hidden"></video>
-        <canvas id="selfieCanvas" width="320" height="240" class="hidden"></canvas>
-        <img id="selfiePreview" src="" alt="Selfie Preview" class="selfie-preview hidden"/>
-        <label for="selfieFileInput" class="visually-hidden">Upload a selfie photo</label>
-        <input type="file" id="selfieFileInput" accept="image/*" class="hidden" title="Upload a selfie photo" placeholder="Choose a selfie image"/>
-        <div class="selfie-button-container">
-            <button id="startCameraBtn">Use Camera</button>
-            <button id="uploadPhotoBtn">Upload Photo</button>
-        </div>
-        <div id="selfieCaptureBtns" class="hidden">
-            <button id="captureSelfieBtn">Capture</button>
-            <button id="cancelCameraBtn">Cancel</button>
-        </div>
-        <div id="selfieConfirmBtns" class="hidden">
-            <button id="confirmSelfieBtn">Confirm & Clock In</button>
-            <button id="retakeSelfieBtn">Retake</button>
-        </div>
-        <button id="closeSelfieModalBtn" class="close-modal-btn">Close</button>
-    </div>
-</div>
+            <!-- SETTINGS SECTION -->
 
-<div id="resignationRequestModal" class="modal-overlay hidden">
-    <div class="modal-content resignation-modal-content">
-        <div class="resignation-card">
-            <h3><i class="fas fa-file-signature"></i> Resignation Request</h3>
-            <form id="resignationForm" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label for="lastWorkingDay">Last Working Day</label>
-                    <input type="date" id="lastWorkingDay" name="lastWorkingDay" required />
+
+
+
+    </div>
+    </div>
+    </main>
+    </div>
+    </div>
+
+    <!-- Selfie Capture Modal -->
+    <div id="selfieModal" class="modal-overlay selfie-modal hidden">
+        <div class="modal-content selfie-modal-content">
+            <h2>Take a Selfie to Clock In</h2>
+            <div class="video-container">
+                <video id="selfieVideo" width="320" height="240" autoplay class="hidden"></video>
+                <canvas id="selfieCanvas" width="320" height="240" class="hidden"></canvas>
+                <img id="selfiePreview" src="" alt="Selfie Preview" class="selfie-preview hidden" />
+            </div>
+
+            <div class="selfie-controls">
+                <label for="selfieFileInput" class="visually-hidden">Upload a selfie photo</label>
+                <input type="file" id="selfieFileInput" accept="image/*" class="hidden" />
+
+                <div id="initialBtns" class="btn-group">
+                    <button id="startCameraBtn" class="modal-btn">Use Camera</button>
+                    <button id="uploadPhotoBtn" class="modal-btn">Upload Photo</button>
                 </div>
-                <div class="form-group">
-                    <label for="resignReason">Reason</label>
-                    <textarea id="resignReason" name="reason" rows="2" required></textarea>
+
+                <div id="captureBtns" class="btn-group hidden">
+                    <button id="captureSelfieBtn" class="modal-btn primary">Capture</button>
+                    <button id="cancelCameraBtn" class="modal-btn">Cancel</button>
                 </div>
-                <div class="form-group">
-                    <label for="resignAttachment">Attachment (PDF/Image, optional)</label>
-                    <input type="file" id="resignAttachment" name="attachment" accept=".pdf,image/*" />
+
+                <div id="confirmBtns" class="btn-group hidden">
+                    <button id="confirmSelfieBtn" class="modal-btn success">Confirm & Clock In</button>
+                    <button id="retakeSelfieBtn" class="modal-btn">Retake</button>
                 </div>
-                <button type="submit" class="submit-btn">Submit Resignation</button>
-            </form>
-            <div id="resignationStatus" class="resignation-status"></div>
-            <button id="closeResignationModalBtn" class="close-modal-btn modal-btn cancel" type="button">Close</button>
+            </div>
+
+            <button id="closeSelfieModalBtn" class="close-modal-btn">Close</button>
         </div>
     </div>
-</div>
 
-<script src="./employee-script.js" onerror="console.error('Failed to load script: ' + this.src)"></script>
+
+
+    <div id="resignationRequestModal" class="modal-overlay hidden">
+        <div class="modal-content resignation-modal-content">
+            <div class="resignation-card">
+                <h3><i class="fas fa-file-signature"></i> Resignation Request</h3>
+                <form id="resignationForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="lastWorkingDay">Last Working Day</label>
+                        <input type="date" id="lastWorkingDay" name="lastWorkingDay" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="resignReason">Reason</label>
+                        <textarea id="resignReason" name="reason" rows="2" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="resignAttachment">Attachment (PDF/Image, optional)</label>
+                        <input type="file" id="resignAttachment" name="attachment" accept=".pdf,image/*" />
+                    </div>
+                    <button type="submit" class="submit-btn">Submit Resignation</button>
+                </form>
+                <div id="resignationStatus" class="resignation-status"></div>
+                <button id="closeResignationModalBtn" class="close-modal-btn modal-btn cancel"
+                    type="button">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./employee-script.js" onerror="console.error('Failed to load script: ' + this.src)"></script>
 </body>
+
 </html>

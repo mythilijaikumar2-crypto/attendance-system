@@ -4,11 +4,27 @@ body {
     margin: 0;
     padding: 0;
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #000;
+    /* Fallback */
     height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden;
+    /* Prevent scrollbars from video */
+}
+
+#bg-video {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    min-width: 100%;
+    min-height: 100%;
+    z-index: -1;
+    object-fit: cover;
+    filter: blur(15px);
+    transform: scale(1.1);
+    /* Prevent blurred edges from being visible */
 }
 
 .login-container {
@@ -16,7 +32,7 @@ body {
     background: #ffffff;
     padding: 35px;
     border-radius: 20px;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
     text-align: center;
     animation: fadeIn 0.4s ease-out;
 }
@@ -79,11 +95,12 @@ h2 {
     font-size: 1.2em;
     z-index: 2;
 }
+
 /* removed stray lines causing errors */
 
 .input-group input:focus {
     border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
 .login-btn {
@@ -130,6 +147,29 @@ h2 {
 
 /* Fade Animation */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mouse Glow Effect */
+.mouse-glow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    mix-blend-mode: overlay;
+    transition: width 0.3s, height 0.3s;
 }

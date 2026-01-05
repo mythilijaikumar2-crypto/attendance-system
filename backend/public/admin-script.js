@@ -80,55 +80,55 @@ document.querySelectorAll('.sidebar .nav-list .nav-item a').forEach(link => {
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
-      // Real-time resignation badge update for admin sidebar
-      async function updateResignationBadge() {
-        const badge = document.getElementById('resignationBadge');
-        if (!badge) return;
-        try {
-          const res = await fetch(`${API_BASE}/api/resignations/all`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
-          if (!res.ok) {
-            badge.style.display = 'none';
-            return;
-          }
-          const data = await res.json();
-          const pending = data.filter(r => r.status && r.status.toLowerCase() === 'pending').length;
-          if (pending > 0) {
-            badge.textContent = pending;
-            badge.style.display = '';
-          } else {
-            badge.textContent = '';
-            badge.style.display = 'none';
-          }
-        } catch {
-          badge.style.display = 'none';
-        }
+  // Real-time resignation badge update for admin sidebar
+  async function updateResignationBadge() {
+    const badge = document.getElementById('resignationBadge');
+    if (!badge) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/resignations/all`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
+      if (!res.ok) {
+        badge.style.display = 'none';
+        return;
       }
-      updateResignationBadge();
-      setInterval(updateResignationBadge, 30000); // update every 30s
-    // Real-time badge update for admin message box
-    async function updateAdminMsgBadge() {
-      const badge = document.getElementById('adminMsgBadge');
-      if (!badge) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/messages/admin/unread-count`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
-        if (!res.ok) {
-          badge.style.display = 'none';
-          return;
-        }
-        const data = await res.json();
-        if (data.unread && data.unread > 0) {
-          badge.textContent = data.unread;
-          badge.style.display = '';
-        } else {
-          badge.textContent = '';
-          badge.style.display = 'none';
-        }
-      } catch {
+      const data = await res.json();
+      const pending = data.filter(r => r.status && r.status.toLowerCase() === 'pending').length;
+      if (pending > 0) {
+        badge.textContent = pending;
+        badge.style.display = '';
+      } else {
+        badge.textContent = '';
         badge.style.display = 'none';
       }
+    } catch {
+      badge.style.display = 'none';
     }
-    updateAdminMsgBadge();
-    setInterval(updateAdminMsgBadge, 30000); // update every 30s
+  }
+  updateResignationBadge();
+  setInterval(updateResignationBadge, 30000); // update every 30s
+  // Real-time badge update for admin message box
+  async function updateAdminMsgBadge() {
+    const badge = document.getElementById('adminMsgBadge');
+    if (!badge) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/messages/admin/unread-count`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
+      if (!res.ok) {
+        badge.style.display = 'none';
+        return;
+      }
+      const data = await res.json();
+      if (data.unread && data.unread > 0) {
+        badge.textContent = data.unread;
+        badge.style.display = '';
+      } else {
+        badge.textContent = '';
+        badge.style.display = 'none';
+      }
+    } catch {
+      badge.style.display = 'none';
+    }
+  }
+  updateAdminMsgBadge();
+  setInterval(updateAdminMsgBadge, 30000); // update every 30s
   // ensure default section
   const defaultSection = document.getElementById('dashboard');
   if (defaultSection && !defaultSection.classList.contains('active')) {
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const el = document.getElementById('adminName');
       if (el) el.innerText = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.empId;
     }
-  } catch(e) {}
+  } catch (e) { }
 
   // ===== HEADER ACTIONS: BELL (NOTIFICATIONS) & ENVELOPE (MESSAGES) =====
   function showModal(title, items) {
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     msgBtn.addEventListener('click', async () => {
       // Fetch real-time admin messages from backend
       try {
-        const res = await fetch(`${API_BASE}/api/messages/admin`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
+        const res = await fetch(`${API_BASE}/api/messages/admin`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
         if (!res.ok) {
           showModal('Messages', ['No messages found.']);
           return;
@@ -260,67 +260,112 @@ function loadAdminSection(id) {
 async function loadResignationsSection() {
   const sec = document.getElementById('resignations');
   if (!sec) return;
-  sec.innerHTML = `<div class="dashboard-content resignations-section"><h1><i class="fas fa-file-signature"></i> Resignation Requests</h1><div id="adminResignationsList" class="admin-resignations-list"><div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div></div>`;
+
+  // Create Main Layout with Two Columns/Sections
+  sec.innerHTML = `
+    <div class="dashboard-content resignations-section">
+      <h1><i class="fas fa-file-signature"></i> Resignation Requests</h1>
+      
+      <div class="resignations-layout">
+        <!-- Pending Section -->
+        <div class="resignations-col">
+          <h2 class="section-title">Pending Requests</h2>
+          <div id="pendingResignations" class="admin-resignations-list">
+             <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="resignations-col">
+          <h2 class="section-title">Resignation History</h2>
+          <div id="historyResignations" class="admin-resignations-list">
+             <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
   try {
-    const res = await fetch(`${API_BASE}/api/resignations/all`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/resignations/all`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) {
-      document.getElementById('adminResignationsList').innerHTML = '<div class="msg-empty">No resignation requests found.</div>';
+      document.getElementById('pendingResignations').innerHTML = '<div class="msg-empty">Error fetching data.</div>';
+      document.getElementById('historyResignations').innerHTML = '';
       return;
     }
     const resignations = await res.json();
-    if (!resignations.length) {
-      document.getElementById('adminResignationsList').innerHTML = '<div class="msg-empty">No resignation requests found.</div>';
-      return;
-    }
-    document.getElementById('adminResignationsList').innerHTML = resignations.map(r => {
+
+    const pendingList = resignations.filter(r => r.status === 'pending');
+    const historyList = resignations.filter(r => r.status !== 'pending');
+
+    function renderCard(r, isHistory) {
       const emp = r.employee || {};
       const empName = emp.firstName || emp.lastName ? `${emp.firstName || ''} ${emp.lastName || ''}`.trim() : (emp.empId || r.empId || 'Employee');
       const empEmail = emp.email || '';
       const empDept = emp.department?.name || '';
       const lastDay = r.lastWorkingDay ? new Date(r.lastWorkingDay).toLocaleDateString() : '';
       const docLink = r.attachmentUrl ? `<a href="${r.attachmentUrl}" target="_blank">View Document</a>` : '';
+
       let actions = '';
-      if (r.status === 'pending') {
+      if (!isHistory) {
         actions = `<div class="admin-resignation-actions">
           <button class="msg-action-btn approve" data-id="${r._id}">Approve</button>
           <button class="msg-action-btn reject" data-id="${r._id}">Reject</button>
         </div>`;
       }
+
       return `
       <div class="admin-resignation-card ${r.status.toLowerCase()}">
         <div class="admin-resignation-header">
           <span class="admin-resignation-emp"><i class="fas fa-user"></i> ${empName}</span>
-          <span class="admin-resignation-date">Submitted: ${new Date(r.submittedAt || r.createdAt).toLocaleString()}</span>
+          <span class="admin-resignation-date">${new Date(r.submittedAt || r.createdAt).toLocaleDateString()}</span>
         </div>
         <div class="admin-resignation-details">
-          <div><b>Email:</b> ${empEmail}</div>
-          <div><b>Department:</b> ${empDept}</div>
-          <div><b>Last Working Day:</b> ${lastDay}</div>
+          <div><b>Dept:</b> ${empDept}</div>
+          <div><b>Last Day:</b> ${lastDay}</div>
           <div><b>Reason:</b> ${r.reason || ''}</div>
-          <div><b>Supporting Document:</b> ${docLink}</div>
+          ${docLink ? `<div><b>Doc:</b> ${docLink}</div>` : ''}
         </div>
         <div class="admin-resignation-status">Status: <b>${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</b></div>
         ${actions}
       </div>
       `;
-    }).join('');
+    }
 
-    // Attach event listeners for Approve/Reject
-    document.querySelectorAll('.admin-resignation-actions .approve').forEach(btn => {
-      btn.onclick = async function() {
+    // Render Pending
+    const pendingContainer = document.getElementById('pendingResignations');
+    if (pendingList.length === 0) {
+      pendingContainer.innerHTML = '<div class="msg-empty">No pending requests.</div>';
+    } else {
+      pendingContainer.innerHTML = pendingList.map(r => renderCard(r, false)).join('');
+    }
+
+    // Render History
+    const historyContainer = document.getElementById('historyResignations');
+    if (historyList.length === 0) {
+      historyContainer.innerHTML = '<div class="msg-empty">No history found.</div>';
+    } else {
+      historyContainer.innerHTML = historyList.map(r => renderCard(r, true)).join('');
+    }
+
+    // Attach Event Listeners (Only for Pending items)
+    pendingContainer.querySelectorAll('.msg-action-btn').forEach(btn => {
+      btn.onclick = async function () {
         const id = btn.getAttribute('data-id');
+        const action = btn.classList.contains('approve') ? 'approved' : 'rejected';
         btn.disabled = true;
+
         try {
           const res = await fetch(`${API_BASE}/api/resignations/review/${id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...authHeaders() },
-            body: JSON.stringify({ status: 'approved' })
+            body: JSON.stringify({ status: action })
           });
           if (res.ok) {
-            btn.closest('.admin-resignation-card').querySelector('.admin-resignation-status').innerHTML = 'Status: <b>Approved</b>';
-            btn.parentElement.innerHTML = '<span class="msg-action-done">Approved</span>';
+            // Refresh section to move item to history
+            loadResignationsSection();
           } else {
-            alert('Failed to approve resignation');
+            alert('Action failed');
             btn.disabled = false;
           }
         } catch {
@@ -329,45 +374,25 @@ async function loadResignationsSection() {
         }
       };
     });
-    document.querySelectorAll('.admin-resignation-actions .reject').forEach(btn => {
-      btn.onclick = async function() {
-        const id = btn.getAttribute('data-id');
-        btn.disabled = true;
-        try {
-          const res = await fetch(`${API_BASE}/api/resignations/review/${id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeaders() },
-            body: JSON.stringify({ status: 'rejected' })
-          });
-          if (res.ok) {
-            btn.closest('.admin-resignation-card').querySelector('.admin-resignation-status').innerHTML = 'Status: <b>Rejected</b>';
-            btn.parentElement.innerHTML = '<span class="msg-action-done">Rejected</span>';
-          } else {
-            alert('Failed to reject resignation');
-            btn.disabled = false;
-          }
-        } catch {
-          alert('Server error');
-          btn.disabled = false;
-        }
-      };
-    });
+
   } catch (err) {
-    document.getElementById('adminResignationsList').innerHTML = '<div class="msg-empty">Error loading resignation requests.</div>';
+    console.error(err);
+    // Error handling
   }
-  // Real-time update: poll every 30s
+
   if (!window._adminResignationInterval) {
     window._adminResignationInterval = setInterval(loadResignationsSection, 30000);
   }
 }
 
+
 // Real-time Messages Section: shows all employee requests and updates
 async function loadMessagesSection() {
   const sec = document.getElementById('messages');
   if (!sec) return;
-  sec.innerHTML = `<div class="dashboard-content messages-section"><h1><i class="fas fa-envelope"></i> Employee Requests & Updates</h1><div id="adminMessagesList" class="admin-messages-list"><div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div></div>`;
+  sec.innerHTML = `<div class="dashboard-content messages-section"><h1>Employee Requests & Updates</h1><div id="adminMessagesList" class="admin-messages-list"><div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div></div>`;
   try {
-    const res = await fetch(`${API_BASE}/api/messages`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/messages`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) {
       document.getElementById('adminMessagesList').innerHTML = '<div class="msg-empty">No messages found.</div>';
       return;
@@ -400,7 +425,7 @@ async function loadMessagesSection() {
 
     // Attach event listeners for Approve/Reject
     document.querySelectorAll('.msg-action-btn.approve').forEach(btn => {
-      btn.onclick = async function() {
+      btn.onclick = async function () {
         const id = btn.getAttribute('data-id');
         btn.disabled = true;
         try {
@@ -422,7 +447,7 @@ async function loadMessagesSection() {
       };
     });
     document.querySelectorAll('.msg-action-btn.reject').forEach(btn => {
-      btn.onclick = async function() {
+      btn.onclick = async function () {
         const id = btn.getAttribute('data-id');
         btn.disabled = true;
         try {
@@ -455,7 +480,7 @@ async function loadMessagesSection() {
 /* DASHBOARD SUMMARY */
 async function loadAdminDashboard() {
   try {
-    const res = await fetch(`${API_BASE}/api/attendance/summary/today`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/attendance/summary/today`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (res.status === 401) {
       // Unauthorized: clear token and redirect to login
       localStorage.removeItem('nxt_token');
@@ -475,7 +500,7 @@ async function loadAdminDashboard() {
 
     // get total employees
     try {
-      const r = await fetch(`${API_BASE}/api/employees`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+      const r = await fetch(`${API_BASE}/api/employees`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
       if (r.status === 401) {
         localStorage.removeItem('nxt_token');
         localStorage.removeItem('nxt_user');
@@ -486,7 +511,7 @@ async function loadAdminDashboard() {
         const list = await r.json();
         if (totalEl) totalEl.innerText = list.length;
       }
-    } catch(e){}
+    } catch (e) { }
 
     // Fetch and render late members
     loadLateMembersToday();
@@ -502,7 +527,7 @@ async function loadLateMembersToday() {
   if (!listEl || !countEl) return;
   listEl.innerHTML = '<div class="text-center" style="color:#aaa;">Loading…</div>';
   try {
-    const res = await fetch(`${API_BASE}/api/attendance/late/today`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/attendance/late/today`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) throw new Error('Failed to fetch');
     const data = await res.json();
     countEl.textContent = data.length;
@@ -512,7 +537,7 @@ async function loadLateMembersToday() {
     }
     listEl.innerHTML = '';
     data.forEach(m => {
-      const initials = (m.name || m.empId || '?').split(' ').map(x => x[0]).join('').toUpperCase().substring(0,2);
+      const initials = (m.name || m.empId || '?').split(' ').map(x => x[0]).join('').toUpperCase().substring(0, 2);
       const checkInTime = m.checkIn ? new Date(m.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--';
       const item = document.createElement('div');
       item.className = 'late-member-item';
@@ -532,44 +557,161 @@ async function loadLateMembersToday() {
   }
 }
 
-/* EMPLOYEES LIST */
+/* EMPLOYEES LIST - Split View */
 async function loadEmployeesList() {
   const sec = document.getElementById('employees');
   if (!sec) return;
   sec.innerHTML = `<div class="dashboard-content"><h2>Loading employees…</h2></div>`;
   try {
-    const res = await fetch(`${API_BASE}/api/employees`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/employees`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) {
       sec.innerHTML = `<div class="dashboard-content"><h2>Unable to load employees</h2></div>`;
       return;
     }
     const list = await res.json();
-    let html = `<div class="dashboard-content"><h1>Employees</h1><div class="employees-grid" id="employeeList"></div></div>`;
-    sec.innerHTML = html;
-    const container = document.getElementById('employeeList');
-    if (!list.length) {
-      container.innerHTML = `<div class='employees-empty-illustration'><svg fill='none' viewBox='0 0 64 64' width='120'><circle cx='32' cy='32' r='30' stroke='#e0e7ef' stroke-width='4'/><path d='M20 44c0-6 12-6 12-6s12 0 12 6v3H20v-3Z' fill='#e0e7ef'/><circle cx='32' cy='28' r='6' fill='#e0e7ef'/></svg><div class='msg'>No employees found</div></div>`;
-      return;
-    }
-    list.forEach((emp, i) => {
-      const d = document.createElement('div');
-      d.className = 'employee-card-anim';
-      d.style.animationDelay = (i * 0.07) + 's';
-      d.innerHTML = `
-        <div class="employee-card-photo-anim"><img src="${emp.photoUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(emp.firstName + ' ' + emp.lastName)}" alt="${emp.firstName || ''} ${emp.lastName || ''}"></div>
-        <div class="employee-card-info-anim">
-          <div class="employee-card-name-anim">${emp.firstName || ''} ${emp.lastName || ''}</div>
-          <div class="employee-card-dept-anim">${emp.department?.name || ''}</div>
-          <div class="employee-card-email-anim">${emp.email || ''}</div>
+
+    // Filter by Role
+    const admins = list.filter(e => e.role === 'admin');
+    const staff = list.filter(e => e.role !== 'admin');
+
+    let html = `
+      <div class="dashboard-content">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h1><i class="fas fa-users"></i> Team Directory</h1>
         </div>
-      `;
-      container.appendChild(d);
-    });
+        
+        <!-- Admins Section -->
+        <h2 class="section-title" style="margin-top:1.5rem; color:#2c3796;">Administrators</h2>
+        <div class="employees-grid" id="adminListContainer"></div>
+
+        <!-- Staff Section -->
+        <h2 class="section-title" style="margin-top:2.5rem; color:#2c3796;">Staff Members</h2>
+        <div class="employees-grid" id="staffListContainer"></div>
+      </div>
+    `;
+    sec.innerHTML = html;
+
+    // Render Admins
+    const adminContainer = document.getElementById('adminListContainer');
+    if (!admins.length) adminContainer.innerHTML = `<div class="msg-empty">No admins found (unusual).</div>`;
+    else admins.forEach((emp, i) => adminContainer.appendChild(createEmployeeCard(emp, i)));
+
+    // Render Staff
+    const staffContainer = document.getElementById('staffListContainer');
+    if (!staff.length) staffContainer.innerHTML = `<div class="msg-empty">No staff members found.</div>`;
+    else staff.forEach((emp, i) => staffContainer.appendChild(createEmployeeCard(emp, i)));
+
   } catch (err) {
     console.error('Load employees error', err);
     sec.innerHTML = `<div class="dashboard-content"><h2>Error loading employees</h2></div>`;
   }
 }
+
+// Helper to create card
+function createEmployeeCard(emp, index) {
+  const d = document.createElement('div');
+  d.className = 'employee-card-anim';
+  d.style.animationDelay = (index * 0.07) + 's';
+  const roleBadge = emp.role === 'admin' ? '<span class="badge badge-admin">Admin</span>' : '';
+  const photo = emp.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent((emp.firstName || '') + ' ' + (emp.lastName || ''))}&background=random`;
+
+  d.innerHTML = `
+    <div class="employee-card-photo-anim"><img src="${photo}" alt="Photo"></div>
+    <div class="employee-card-info-anim">
+      <div class="employee-card-name-anim">${emp.firstName || ''} ${emp.lastName || ''} ${roleBadge}</div>
+      <div class="employee-card-dept-anim">${emp.department?.name || 'No Dept'}</div>
+      <div class="employee-card-email-anim">${emp.email || 'No Email'}</div>
+      <div class="employee-card-email-anim" style="font-size:0.85rem; margin-top:0.3rem;"><i class="fas fa-id-badge"></i> ${emp.empId}</div>
+    </div>
+  `;
+  d.style.cursor = 'pointer';
+  d.onclick = () => openEmployeeDetailsModal(emp);
+  return d;
+}
+
+/* ================= EMPLOYEE DETAILS MODAL ================= */
+window.openEmployeeDetailsModal = async function (emp) {
+  // Helper to format time
+  const fmtTime = (d) => d ? new Date(d).toLocaleTimeString() : '—';
+
+  // Fetch latest attendance status
+  let attData = { checkIn: null, checkOut: null, clockedIn: false };
+  try {
+    const res = await fetch(`${API_BASE}/api/attendance/status/${emp.empId}`, {
+      headers: { ...authHeaders() }
+    });
+    if (res.ok) attData = await res.json();
+  } catch (e) { console.error(e); }
+
+  // Create Modal
+  let modal = document.getElementById('empDetailsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'empDetailsModal';
+    modal.className = 'settings-modal-overlay';
+    modal.style.zIndex = '10005';
+    document.body.appendChild(modal);
+  }
+
+  const photo = emp.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent((emp.firstName || '') + ' ' + (emp.lastName || ''))}&background=random`;
+
+  modal.innerHTML = `
+    <div class="settings-modal-content" style="max-width:500px; width:90%; position:relative;">
+        <button onclick="document.getElementById('empDetailsModal').style.display='none'" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+        
+        <div style="text-align:center; margin-bottom:1.5rem;">
+            <img src="${photo}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; margin-bottom:1rem; border:3px solid #eee;">
+            <h2 style="margin:0; color:#2c3e50;">${emp.firstName} ${emp.lastName}</h2>
+            <div style="color:#7f8c8d; margin-top:5px; font-weight:500;">${(emp.role || 'Employee').toUpperCase()}</div>
+        </div>
+        
+        <div style="background:#f8fafc; padding:1.5rem; border-radius:12px; display:grid; gap:1rem; border:1px solid #e2e8f0;">
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                <span style="font-weight:600; color:#475569;">Emp ID</span>
+                <span style="color:#334155;">${emp.empId}</span>
+            </div>
+             <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                <span style="font-weight:600; color:#475569;">Department</span>
+                <span style="color:#334155;">${emp.department?.name || '—'}</span>
+            </div>
+             <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                <span style="font-weight:600; color:#475569;">Email</span>
+                <span style="color:#334155;">${emp.email}</span>
+            </div>
+            
+            <div style="margin-top:0.5rem; font-weight:700; color:#2c3796; text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px;">Today's Attendance</div>
+            
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                <span style="font-weight:600; color:#475569;">Check In</span>
+                <span style="color:${attData.checkIn ? '#10b981' : '#94a3b8'}; font-weight:600;">${fmtTime(attData.checkIn)}</span>
+            </div>
+             <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                <span style="font-weight:600; color:#475569;">Check Out</span>
+                 <span style="color:${attData.checkOut ? '#ef4444' : '#94a3b8'}; font-weight:600;">${fmtTime(attData.checkOut)}</span>
+            </div>
+            
+            ${(attData.meta && attData.meta.earlyDeparture) ? `
+             <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                <span style="font-weight:600; color:#dc2626;">Leaving Warning</span>
+                <span style="color:#dc2626; font-weight:600;">Early Departure (${attData.meta.warningCount || 1})</span>
+            </div>` : ''}
+
+             <div style="display:flex; justify-content:space-between;">
+                <span style="font-weight:600; color:#475569;">Current Status</span>
+                <span class="badge ${attData.clockedIn ? 'badge-success' : (attData.checkOut ? 'badge-warning' : 'badge-danger')}" style="padding: 4px 10px; border-radius: 4px; color: white; background-color: ${attData.clockedIn ? '#28a745' : (attData.checkOut ? '#ffc107' : '#dc3545')};">
+                    ${attData.clockedIn ? 'Present' : (attData.checkOut ? 'Checked Out' : 'Absent')}
+                </span>
+            </div>
+        </div>
+        
+        <div style="margin-top:1.5rem; text-align:right;">
+             <button onclick="document.getElementById('empDetailsModal').style.display='none'" style="padding:0.6rem 1.2rem; background:#cbd5e1; border:none; border-radius:6px; cursor:pointer; font-weight:600; color:#334155;">Close</button>
+        </div>
+    </div>
+   `;
+
+  modal.style.display = 'flex';
+};
 
 /* ATTENDANCE - simple view */
 async function loadAttendance() {
@@ -582,7 +724,7 @@ async function loadAttendance() {
     sec.innerHTML = `<div class="dashboard-content"><h1>Attendance Records <span class='attendance-refreshing' id='attendanceRefreshing'></span></h1><div class="attendance-records-grid" id="attendanceRecords"></div></div>`;
     const container = document.getElementById('attendanceRecords');
     try {
-      const res = await fetch(`${API_BASE}/api/attendance/history`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+      const res = await fetch(`${API_BASE}/api/attendance/history`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
       if (!res.ok) {
         container.innerHTML = `<div class='attendance-empty-illustration'><svg fill='none' viewBox='0 0 64 64' width='120'><circle cx='32' cy='32' r='30' stroke='#e0e7ef' stroke-width='4'/><path d='M20 44c0-6 12-6 12-6s12 0 12 6v3H20v-3Z' fill='#e0e7ef'/><circle cx='32' cy='28' r='6' fill='#e0e7ef'/></svg><div class='msg'>Unable to load attendance records</div></div>`;
         return;
@@ -624,12 +766,7 @@ async function loadAttendance() {
             <div class="attendance-record-status ${rec.status}">${rec.status.charAt(0).toUpperCase() + rec.status.slice(1)}</div>
             <div class="attendance-record-time">Check-in: ${rec.checkIn ? new Date(rec.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--'}${rec.checkOut ? '<br>Check-out: ' + new Date(rec.checkOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}</div>
             ${workingHours ? `<div class="attendance-record-hours">Working: ${workingHours}</div>` : ''}
-            <div class="attendance-record-meta">
-              ${capturedAt ? `<div><b>Capture Time:</b> ${capturedAt}</div>` : ''}
-              ${device ? `<div><b>Device:</b> ${device}</div>` : ''}
-              ${resolution ? `<div><b>Resolution:</b> ${resolution}</div>` : ''}
-              ${gps ? `<div><b>GPS:</b> ${gps.lat || gps.latitude}, ${gps.lon || gps.longitude}</div>` : ''}
-            </div>
+            <div style="margin-top:0.5rem;"><button class="meta-btn" style="font-size:0.8rem; padding:4px 8px; border:1px solid #ddd; background:#f8fafc; border-radius:4px; cursor:pointer;" title="View Metadata"><i class="fas fa-info-circle"></i> Metadata</button></div>
           </div>
         `;
         container.appendChild(d);
@@ -654,29 +791,7 @@ async function loadAttendance() {
   });
 }
 
-// Admin: Load Present Today with selfies
-async function loadPresentToday() {
-  const res = await fetch('/api/attendance/today', {
-    headers: { Authorization: 'Bearer ' + localStorage.getItem('nxt_token') }
-  });
-  const data = await res.json();
-  const listEl = document.getElementById('presentList');
-  listEl.innerHTML = '';
-  data.forEach(a => {
-    listEl.innerHTML += `
-      <div class="present-employee-item">
-        <img src="${a.selfieImageUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #6366f1;">
-        <div class="present-info">
-          <div class="present-name">${a.employeeName || a.empId}</div>
-          <div class="present-department">${a.department || ''}</div>
-        </div>
-        <div class="present-time"><i class="fas fa-clock"></i> ${a.checkIn ? new Date(a.checkIn).toLocaleTimeString() : '--'}</div>
-        <div class="present-ip">IP: ${a.ipAddress || '-'}</div>
-        <div class="present-device">Device: ${a.deviceInfo || '-'}</div>
-      </div>
-    `;
-  });
-}
+
 
 /* PRESENT / ABSENT quick filters (using summary as placeholder) */
 async function loadPresentToday() {
@@ -684,7 +799,7 @@ async function loadPresentToday() {
   if (!sec) return;
   sec.innerHTML = `<div class="dashboard-content present-list-section"><h1>Present Today</h1><div class="present-list" id="presentList"><div class="present-empty-illustration"><svg fill="none" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" stroke="#e0e7ef" stroke-width="4"/><path d="M16 32c0-4 8-4 8-4s8 0 8 4v2H16v-2Z" fill="#e0e7ef"/><circle cx="24" cy="20" r="4" fill="#e0e7ef"/></svg><div class="msg">Loading…</div></div></div></div>`;
   try {
-    const res = await fetch(`${API_BASE}/api/attendance/present/today`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/attendance/present/today`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) throw new Error('Failed to fetch');
     const data = await res.json();
     const listEl = document.getElementById('presentList');
@@ -696,10 +811,12 @@ async function loadPresentToday() {
     data.forEach(emp => {
       // If selfieUrl is present, show image, else show initials
       let avatarHtml = '';
-      if (emp.meta && emp.meta.selfieUrl) {
-        avatarHtml = `<img src="${emp.meta.selfieUrl}" alt="Selfie" class="present-avatar-img" style="width:48px;height:48px;object-fit:cover;border-radius:50%;border:2px solid #6366f1;" />`;
-      } else {
-        const initials = (emp.name || emp.empId || '?').split(' ').map(x => x[0]).join('').toUpperCase().substring(0,2);
+      // User requested to hide selfie image for now
+      /* if (emp.meta && emp.meta.selfieUrl) {
+        const url = emp.meta.selfieUrl.startsWith('http') ? emp.meta.selfieUrl : `${API_BASE}${emp.meta.selfieUrl}`;
+        avatarHtml = `<div class="present-avatar-container"><img src="${url}" alt="Selfie" class="present-avatar-img" onclick="openSelfieModal('${url}')"></div>`;
+      } else */ {
+        const initials = (emp.name || emp.empId || '?').split(' ').map(x => x[0]).join('').toUpperCase().substring(0, 2);
         avatarHtml = `<div class="present-avatar">${initials}</div>`;
       }
       const checkInTime = emp.checkIn ? new Date(emp.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--';
@@ -735,7 +852,7 @@ async function loadAbsentToday() {
   if (!sec) return;
   sec.innerHTML = `<div class="dashboard-content absent-list-section"><h1>Absent Today</h1><div class="absent-list" id="absentList"><div class="absent-empty-illustration"><svg fill="none" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" stroke="#fee2e2" stroke-width="4"/><path d="M16 32c0-4 8-4 8-4s8 0 8 4v2H16v-2Z" fill="#fee2e2"/><circle cx="24" cy="20" r="4" fill="#fee2e2"/></svg><div class="msg">Loading…</div></div></div></div>`;
   try {
-    const res = await fetch(`${API_BASE}/api/attendance/absent/today`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/attendance/absent/today`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) throw new Error('Failed to fetch');
     const data = await res.json();
     const listEl = document.getElementById('absentList');
@@ -745,7 +862,7 @@ async function loadAbsentToday() {
     }
     listEl.innerHTML = '';
     data.forEach(emp => {
-      const initials = (emp.name || emp.empId || '?').split(' ').map(x => x[0]).join('').toUpperCase().substring(0,2);
+      const initials = (emp.name || emp.empId || '?').split(' ').map(x => x[0]).join('').toUpperCase().substring(0, 2);
       const item = document.createElement('div');
       item.className = 'absent-employee-item';
       item.innerHTML = `
@@ -770,7 +887,7 @@ async function loadLeaveRequests() {
   if (!sec) return;
   sec.innerHTML = `<div class="dashboard-content leave-requests-section"><h1>Leave Requests</h1><div id="leaveList" class="leave-requests-list"></div></div>`;
   try {
-    const res = await fetch(`${API_BASE}/api/leaves`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+    const res = await fetch(`${API_BASE}/api/leaves`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
     if (!res.ok) {
       sec.innerHTML = `<div class="dashboard-content leave-requests-section"><h2>Unable to load leaves</h2></div>`;
       return;
@@ -783,7 +900,7 @@ async function loadLeaveRequests() {
       const empEmail = emp.email || '';
       const empDept = emp.department?.name || l.department || '';
       const empMobile = emp.phone || '';
-      const dates = `${l.startDate.substring(0,10)} → ${l.endDate.substring(0,10)}`;
+      const dates = `${l.startDate.substring(0, 10)} → ${l.endDate.substring(0, 10)}`;
       const d = document.createElement('div');
       d.className = 'leave-request-item';
       d.innerHTML = `
@@ -816,7 +933,7 @@ async function reviewLeave(id, status) {
   try {
     const res = await fetch(`${API_BASE}/api/leaves/${id}/review`, {
       method: 'PUT',
-      headers: { 'Content-Type':'application/json', ...authHeaders() },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ status })
     });
     const data = await res.json();
@@ -830,10 +947,10 @@ async function reviewLeave(id, status) {
     if (data && data.empId) {
       await fetch(`${API_BASE}/api/employees/${data.empId}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type':'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           type: 'leave',
-          message: `Your leave request from ${data.startDate?.substring(0,10) || ''} to ${data.endDate?.substring(0,10) || ''} has been ${status}.`,
+          message: `Your leave request from ${data.startDate?.substring(0, 10) || ''} to ${data.endDate?.substring(0, 10) || ''} has been ${status}.`,
           leaveId: id,
           status
         })
@@ -869,7 +986,7 @@ function showAdminLeaveConfirmation(msg, success = true) {
 }
 
 
-/* REPORTS placeholder */
+/* REPORTS */
 async function loadReports() {
   const sec = document.getElementById('reports');
   if (!sec) return;
@@ -881,86 +998,177 @@ async function loadReports() {
         <div class="reports-group">
           <h2>Daily Attendance Summary</h2>
           <div id="dailyReport">
+            <div class="report-actions">
+                <button class="report-export-btn excel" id="exportDailyExcel"><i class="fas fa-file-excel"></i> Excel</button>
+                <button class="report-export-btn pdf" id="exportDailyPDF"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
             <div class="daily-report-section" id="dailyReportData">
-                <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading Daily Report...</div>
+                <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
             </div>
           </div>
-          <button id="exportDailyExcel" class="submit-btn"><i class="fas fa-file-excel"></i> Export Excel</button>
-          <button id="exportDailyPDF" class="submit-btn"><i class="fas fa-file-pdf"></i> Export PDF</button>
         </div>
         
         <div class="reports-group">
           <h2>Monthly Attendance Report</h2>
           <div id="monthlyReport">
+            <div class="report-actions">
+                <button class="report-export-btn excel" id="exportMonthlyExcel"><i class="fas fa-file-excel"></i> Excel</button>
+                <button class="report-export-btn pdf" id="exportMonthlyPDF"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
              <div class="daily-report-section" id="monthlyReportData">
-                <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading Monthly Report...</div>
+                <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
             </div>
           </div>
-          <button id="exportMonthlyExcel" class="submit-btn"><i class="fas fa-file-excel"></i> Export Excel</button>
-          <button id="exportMonthlyPDF" class="submit-btn"><i class="fas fa-file-pdf"></i> Export PDF</button>
         </div>
         
         <div class="reports-group">
           <h2>Department-wise Performance</h2>
           <div id="departmentReport">
+            <div class="report-actions">
+                <button class="report-export-btn excel" id="exportDeptExcel"><i class="fas fa-file-excel"></i> Excel</button>
+                <button class="report-export-btn pdf" id="exportDeptPDF"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
              <div class="daily-report-section" id="departmentReportData">
-                <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading Department Report...</div>
+                <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
             </div>
           </div>
-          <button id="exportDeptExcel" class="submit-btn"><i class="fas fa-file-excel"></i> Export Excel</button>
-          <button id="exportDeptPDF" class="submit-btn"><i class="fas fa-file-pdf"></i> Export PDF</button>
         </div>
         
         <div class="reports-group">
           <h2>Late Members Statistics</h2>
           <div id="lateReport">
+            <div class="report-actions">
+                <button class="report-export-btn excel" id="exportLateExcel"><i class="fas fa-file-excel"></i> Excel</button>
+                <button class="report-export-btn pdf" id="exportLatePDF"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
              <div class="daily-report-section" id="lateReportData">
-                <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading Late Members Report...</div>
+                <div class="msg-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
             </div>
           </div>
-          <button id="exportLateExcel" class="submit-btn"><i class="fas fa-file-excel"></i> Export Excel</button>
-          <button id="exportLatePDF" class="submit-btn"><i class="fas fa-file-pdf"></i> Export PDF</button>
         </div>
         
       </div>
     </div>
   `;
 
+  // --- Fetch Data ---
+
+  // 1. Daily Summary
+  try {
+    const res = await fetch(`${API_BASE}/api/attendance/summary/today`, { headers: authHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      // data: { onTime, late, totalPresent, absent, onLeave }
+      // Render as Table
+      renderSimpleReportTable('dailyReportData', 'Today\'s Overview', data);
+    } else {
+      document.getElementById('dailyReportData').innerHTML = '<div class="msg-error">Failed to load daily report</div>';
+    }
+  } catch (e) { console.error(e); }
+
+  // 2. Monthly Summary (Current Month)
+  try {
+    const res = await fetch(`${API_BASE}/api/attendance/summary/monthly`, { headers: authHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      // data: { "YYYY-MM-DD": { present, late, absent, onLeave } ... }
+      // This is a list of days. Let's summarize it or show a table of last 7 days? 
+      // User asked for Monthly Report. Let's show table of days.
+      // Convert object to array
+      const rows = Object.entries(data).sort().reverse().map(([date, stats]) => ({
+        date: new Date(date).toLocaleDateString(),
+        ...stats
+      }));
+      // Render list
+      renderListReportTable('monthlyReportData', 'Current Month Breakdown', rows, [
+        { header: 'Date', key: 'date' },
+        { header: 'Present', key: 'present' },
+        { header: 'Late', key: 'late' },
+        { header: 'Absent', key: 'absent' },
+        { header: 'On Leave', key: 'onLeave' }
+      ]);
+    } else {
+      document.getElementById('monthlyReportData').innerHTML = '<div class="msg-error">Failed to load monthly report</div>';
+    }
+  } catch (e) { console.error(e); }
+
+  // 3. Department Summary
+  try {
+    const res = await fetch(`${API_BASE}/api/attendance/summary/department`, { headers: authHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      // data: { "HR": { present, late... } ... }
+      const rows = Object.entries(data).map(([dept, stats]) => ({
+        department: dept,
+        ...stats
+      }));
+      renderListReportTable('departmentReportData', 'Department Performance', rows, [
+        { header: 'Department', key: 'department' },
+        { header: 'Present', key: 'present' },
+        { header: 'Late', key: 'late' },
+        { header: 'Absent', key: 'absent' },
+        { header: 'On Leave', key: 'onLeave' }
+      ]);
+    } else {
+      document.getElementById('departmentReportData').innerHTML = '<div class="msg-error">Failed to load department report</div>';
+    }
+  } catch (e) { console.error(e); }
+
+  // 4. Late Members
+  try {
+    const res = await fetch(`${API_BASE}/api/attendance/late/today`, { headers: authHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      // data: [ { empId, name, department, checkIn } ... ]
+      renderListReportTable('lateReportData', 'Today\'s Late Logins', data, [
+        { header: 'Name', key: 'name' },
+        { header: 'Dept', key: 'department' },
+        { header: 'Time', key: 'checkIn' }
+      ]);
+    } else {
+      document.getElementById('lateReportData').innerHTML = '<div class="msg-error">Failed to load late report</div>';
+    }
+  } catch (e) { console.error(e); }
+
+
   // --- Helper function to render simple data object as a table ---
   function renderSimpleReportTable(id, title, data) {
-      const container = document.getElementById(id);
-      if (!container) return;
-      if (!data || Object.keys(data).length === 0) {
-          container.innerHTML = `<div class="daily-report-empty">No ${title} data available.</div>`;
-          return;
+    const container = document.getElementById(id);
+    if (!container) return;
+    if (!data || Object.keys(data).length === 0) {
+      container.innerHTML = `<div class="daily-report-empty">No ${title} data available.</div>`;
+      return;
+    }
+
+    let tableRows = Object.entries(data).map(([key, value]) => {
+      const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+      let statusClass = '';
+      if (typeof value === 'number') {
+        // good: present, onTime, totalPresent. bad: absent, late. neutral: onLeave
+        if (['absent', 'late'].includes(key)) statusClass = 'rejected'; // red
+        else if (['onTime', 'present', 'totalPresent'].includes(key)) statusClass = 'approved'; // green
+        else statusClass = 'pending'; // yellow
       }
-      
-      let tableRows = Object.entries(data).map(([key, value]) => {
-          const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-          let statusClass = '';
-          if (typeof value === 'number') {
-              statusClass = (key.toLowerCase().includes('absent') || key.toLowerCase().includes('late')) ? 'rejected' : 'approved';
-          }
-          return `
+      return `
               <tr>
                   <td>${formattedKey}</td>
                   <td>${value}</td>
-                  <td class="report-status ${statusClass}">${statusClass ? statusClass.charAt(0).toUpperCase() + statusClass.slice(1) : ''}</td>
+                  <td class="report-status ${statusClass}"><div class="status-dot"></div></td>
               </tr>
           `;
-      }).join('');
+    }).join('');
 
-      container.innerHTML = `
+    container.innerHTML = `
         <div class="daily-report-header">
             <h3 class="daily-report-title"><i class="fas fa-chart-line"></i> ${title}</h3>
         </div>
         <div style="overflow-x: auto;">
-          <table class="daily-report-table" style="min-width: 400px;">
+          <table class="daily-report-table" style="width:100%;">
               <thead>
                   <tr>
                       <th>Metric</th>
                       <th>Value</th>
-                      <th>Status</th>
+                      <th>Indicator</th>
                   </tr>
               </thead>
               <tbody>
@@ -970,162 +1178,168 @@ async function loadReports() {
         </div>
       `;
   }
-  
-  // --- Helper function to render list of objects as a table (e.g., Department or Late Members) ---
-  function renderListReportTable(id, title, data, columns, iconClass) {
-      const container = document.getElementById(id);
-      if (!container) return;
-      if (!data || data.length === 0) {
-          container.innerHTML = `<div class="daily-report-empty">No ${title} data available.</div>`;
-          return;
-      }
-      
-      const headerRow = columns.map(col => `<th>${col.header}</th>`).join('');
-      
-      const bodyRows = data.map((row, index) => {
-          let rowHtml = columns.map(col => {
-              let value = row[col.key] || '';
-              // Simple formatting for status or number
-              let statusClass = '';
-              
-              if (col.key === 'checkIn' || col.key === 'checkInTime') {
-                  value = value ? new Date(value).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--';
-              } else if (col.key.toLowerCase().includes('status')) {
-                  statusClass = value.toLowerCase();
-              } else if (typeof value === 'number') {
-                   // Example logic: if a number is high and related to absence/lateness, flag it.
-                   if (col.key.toLowerCase().includes('absent') || col.key.toLowerCase().includes('late')) {
-                       statusClass = (value > 2) ? 'rejected' : 'approved';
-                   } else if (col.key.toLowerCase().includes('present')) {
-                       statusClass = (value < 80) ? 'pending' : 'approved'; // Assuming percentage
-                   }
-              }
-              
-              const displayValue = col.key.toLowerCase().includes('avg') && typeof row[col.key] === 'number' ? `${row[col.key].toFixed(1)}%` : value;
 
-              return `<td class="report-status ${statusClass}">${displayValue}</td>`;
-          }).join('');
-          
-          return `<tr>${rowHtml}</tr>`;
-      }).join('');
+  // --- Helper function to render list of objects as a table ---
+  function renderListReportTable(id, title, data, columns) {
+    const container = document.getElementById(id);
+    if (!container) return;
+    if (!data || data.length === 0) {
+      container.innerHTML = `<div class="daily-report-empty">No data available.</div>`;
+      return;
+    }
 
-      container.innerHTML = `
+    const headerRow = columns.map(col => `<th>${col.header}</th>`).join('');
+
+    const bodyRows = data.map(row => {
+      const cells = columns.map(col => `<td>${row[col.key] !== undefined ? row[col.key] : '-'}</td>`).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+
+    container.innerHTML = `
         <div class="daily-report-header">
-            <h3 class="daily-report-title"><i class="${iconClass}"></i> ${title}</h3>
+            <h3 class="daily-report-title"><i class="fas fa-table"></i> ${title}</h3>
         </div>
-        <div style="overflow-x: auto;">
-            <table class="daily-report-table" style="min-width: 500px;">
-                <thead>
-                    <tr>${headerRow}</tr>
-                </thead>
-                <tbody>
-                    ${bodyRows}
-                </tbody>
-            </table>
+        <div style="overflow-x: auto; max-height: 400px;">
+          <table class="daily-report-table" style="width:100%;">
+              <thead>
+                  <tr>${headerRow}</tr>
+              </thead>
+              <tbody>
+                  ${bodyRows}
+              </tbody>
+          </table>
         </div>
-      `;
+    `;
   }
+
 
 
   // --- 1. Daily Attendance Summary (Rendered as Table) ---
-  try {
-    const res = await fetch(`${API_BASE}/api/attendance/summary/today`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
-    const data = await res.json();
-    const container = document.getElementById('dailyReportData');
-    
-    if (data && typeof data === 'object') {
-        let tableHtml = `
-            <div class="daily-report-header">
-                <h3 class="daily-report-title"><i class="fas fa-calendar-check"></i> Today's Summary</h3>
-            </div>
-            <div style="overflow-x: auto;">
-              <table class="daily-report-table" style="min-width: 400px;">
-                  <thead>
-                      <tr>
-                          <th>Metric</th>
-                          <th>Count</th>
-                          <th>Status</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      <tr>
-                          <td>Total Employees</td>
-                          <td>${data.total ?? 0}</td>
-                          <td class="report-status approved">Clear</td>
-                      </tr>
-                      <tr>
-                          <td>Present</td>
-                          <td>${data.present ?? 0}</td>
-                          <td class="report-status approved">On Time</td>
-                      </tr>
-                      <tr>
-                          <td>Absent</td>
-                          <td>${data.absent ?? 0}</td>
-                          <td class="report-status rejected">Missed</td>
-                      </tr>
-                      <tr>
-                          <td>On Leave</td>
-                          <td>${data.onLeave ?? 0}</td>
-                          <td class="report-status pending">Excused</td>
-                      </tr>
-                      <tr>
-                          <td>Late Check-in</td>
-                          <td>${data.late ?? 0}</td>
-                          <td class="report-status pending">Needs Review</td>
-                      </tr>
-                  </tbody>
-              </table>
-            </div>
-        `;
-        container.innerHTML = tableHtml;
-    } else {
-        container.innerHTML = `<div class="daily-report-empty">No detailed summary available today.</div>`;
+  // --- 1. Daily Attendance Summary (Rendered as Table) ---
+  // --- 1. Daily Attendance Summary (Rendered as Table) ---
+  (async function initReports() {
+    const safeSetHtml = (id, html) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    };
+
+    // 1. Daily Summary
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/summary/today`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
+      const data = await res.json();
+
+      const container = document.getElementById('dailyReportData');
+      if (container) {
+        if (data && typeof data === 'object') {
+          let tableHtml = `
+              <div class="daily-report-header">
+                  <h3 class="daily-report-title"><i class="fas fa-calendar-check"></i> Today's Summary</h3>
+              </div>
+              <div style="overflow-x: auto;">
+                <table class="daily-report-table" style="min-width: 400px;">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Count</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Total Employees</td>
+                            <td>${data.total ?? 0}</td>
+                            <td class="report-status approved">Clear</td>
+                        </tr>
+                        <tr>
+                            <td>Present</td>
+                            <td>${data.present ?? 0}</td>
+                            <td class="report-status approved">On Time</td>
+                        </tr>
+                        <tr>
+                            <td>Absent</td>
+                            <td>${data.absent ?? 0}</td>
+                            <td class="report-status rejected">Missed</td>
+                        </tr>
+                        <tr>
+                            <td>On Leave</td>
+                            <td>${data.onLeave ?? 0}</td>
+                            <td class="report-status pending">Excused</td>
+                        </tr>
+                        <tr>
+                            <td>Late Check-in</td>
+                            <td>${data.late ?? 0}</td>
+                            <td class="report-status pending">Needs Review</td>
+                        </tr>
+                    </tbody>
+                </table>
+              </div>
+          `;
+          container.innerHTML = tableHtml;
+        } else {
+          container.innerHTML = `<div class="daily-report-empty">No detailed summary available today.</div>`;
+        }
+      }
+    } catch (e) {
+      safeSetHtml('dailyReportData', `<div class="daily-report-empty">Error loading daily attendance summary.</div>`);
     }
-  } catch(e) {
-    document.getElementById('dailyReportData').innerHTML = `<div class="daily-report-empty">Error loading daily attendance summary.</div>`;
-  }
-  
-  // --- 2. Monthly Report (Converted to Table) ---
-  try {
-    const res = await fetch(`${API_BASE}/api/attendance/summary/monthly`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
-    const data = await res.json();
-    renderSimpleReportTable('monthlyReportData', 'Monthly Summary', data);
-  } catch(e) {
-    document.getElementById('monthlyReportData').innerHTML = `<div class="daily-report-empty">Error loading monthly summary.</div>`;
-  }
 
+    // 2. Monthly Report
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/summary/monthly`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
+      const data = await res.json();
+      // Transform { "YYYY-MM-DD": { present: 1, ... } } -> [ { date: "...", present: 1, ... } ]
+      const rows = Object.entries(data).sort().reverse().map(([date, stats]) => ({
+        date: new Date(date).toLocaleDateString(),
+        ...stats
+      }));
+      const columns = [
+        { header: 'Date', key: 'date' },
+        { header: 'Present', key: 'present' },
+        { header: 'Late', key: 'late' },
+        { header: 'Absent', key: 'absent' },
+        { header: 'On Leave', key: 'onLeave' }
+      ];
+      renderListReportTable('monthlyReportData', 'Monthly Summary', rows, columns);
+    } catch (e) {
+      safeSetHtml('monthlyReportData', `<div class="daily-report-empty">Error loading monthly summary.</div>`);
+    }
 
-  // --- 3. Department-wise Performance (Converted to Table) ---
-  try {
-    const res = await fetch(`${API_BASE}/api/attendance/summary/department`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
-    const data = await res.json();
-    // Assuming data is an array of objects like: [{ department: 'HR', total: 10, presentAvg: 90.5, absentAvg: 9.5, ... }]
-    const columns = [
+    // 3. Department-wise Performance
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/summary/department`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
+      const data = await res.json();
+      // Transform { "HR": { present: 1, ... } } -> [ { department: "HR", present: 1, ... } ]
+      const rows = Object.entries(data).map(([dept, stats]) => ({
+        department: dept,
+        ...stats
+      }));
+      const columns = [
         { header: 'Department', key: 'department' },
-        { header: 'Total Employees', key: 'total' },
-        { header: 'Present Avg.', key: 'presentAvg' }, 
-        { header: 'Absent Avg.', key: 'absentAvg' }
-    ];
-    renderListReportTable('departmentReportData', 'Department Performance', data, columns, 'fas fa-chart-pie');
-  } catch(e) {
-    document.getElementById('departmentReportData').innerHTML = `<div class="daily-report-empty">Error loading department performance.</div>`;
-  }
+        { header: 'Present', key: 'present' },
+        { header: 'Late', key: 'late' },
+        { header: 'Absent', key: 'absent' },
+        { header: 'On Leave', key: 'onLeave' }
+      ];
+      renderListReportTable('departmentReportData', 'Department Performance', rows, columns, 'fas fa-chart-pie');
+    } catch (e) {
+      safeSetHtml('departmentReportData', `<div class="daily-report-empty">Error loading department performance.</div>`);
+    }
 
-  // --- 4. Late Members Statistics (Converted to Table) ---
-  try {
-    const res = await fetch(`${API_BASE}/api/attendance/late/today`, { headers: { 'Content-Type': 'application/json', ...authHeaders() }});
-    const data = await res.json();
-    // Assuming data is an array of objects like: [{ name: 'A. Smith', department: 'IT', checkIn: '2025-12-08T09:30:00.000Z' }]
-    const columns = [
+    // 4. Late Members Statistics
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/late/today`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
+      const data = await res.json();
+      const columns = [
         { header: 'Employee Name', key: 'name' },
         { header: 'Department', key: 'department' },
         { header: 'Check-in Time', key: 'checkIn' }
-    ];
-    renderListReportTable('lateReportData', 'Late Check-ins Today', data, columns, 'fas fa-clock');
-  } catch(e) {
-    document.getElementById('lateReportData').innerHTML = `<div class="daily-report-empty">Error loading late members report.</div>`;
-  }
-  
+      ];
+      renderListReportTable('lateReportData', 'Late Check-ins Today', data, columns, 'fas fa-clock');
+    } catch (e) {
+      safeSetHtml('lateReportData', `<div class="daily-report-empty">Error loading late members report.</div>`);
+    }
+  })();
+
   // Export buttons (Excel/PDF) - placeholder logic
 
   // Helper to download file from backend
@@ -1170,14 +1384,20 @@ async function loadReports() {
     }
   }
 
-  document.getElementById('exportDailyExcel').onclick = () => downloadReport(`${API_BASE}/api/attendance/export/daily/excel`, 'DailyAttendance.xlsx');
-  document.getElementById('exportDailyPDF').onclick = () => downloadReport(`${API_BASE}/api/attendance/export/daily/pdf`, 'DailyAttendance.pdf');
-  document.getElementById('exportMonthlyExcel').onclick = () => downloadReport(`${API_BASE}/api/attendance/export/monthly/excel`, 'MonthlyAttendance.xlsx');
-  document.getElementById('exportMonthlyPDF').onclick = () => downloadReport(`${API_BASE}/api/attendance/export/monthly/pdf`, 'MonthlyAttendance.pdf');
-  document.getElementById('exportDeptExcel').onclick = () => downloadReport(`${API_BASE}/api/attendance/export/department/excel`, 'DepartmentPerformance.xlsx');
-  document.getElementById('exportDeptPDF').onclick = () => downloadReport(`${API_BASE}/api/attendance/export/department/pdf`, 'DepartmentPerformance.pdf');
-  document.getElementById('exportLateExcel').onclick = () => downloadReport(`${API_BASE}/api/attendance/export/late/excel`, 'LateMembers.xlsx');
-  document.getElementById('exportLatePDF').onclick = () => downloadReport(`${API_BASE}/api/attendance/export/late/pdf`, 'LateMembers.pdf');
+  // Export Helpers
+  function attachExport(id, url, filename) {
+    const btn = document.getElementById(id);
+    if (btn) btn.onclick = () => downloadReport(url, filename);
+  }
+
+  attachExport('exportDailyExcel', `${API_BASE}/api/attendance/export/daily/excel`, 'DailyAttendance.xlsx');
+  attachExport('exportDailyPDF', `${API_BASE}/api/attendance/export/daily/pdf`, 'DailyAttendance.pdf');
+  attachExport('exportMonthlyExcel', `${API_BASE}/api/attendance/export/monthly/excel`, 'MonthlyAttendance.xlsx');
+  attachExport('exportMonthlyPDF', `${API_BASE}/api/attendance/export/monthly/pdf`, 'MonthlyAttendance.pdf');
+  attachExport('exportDeptExcel', `${API_BASE}/api/attendance/export/department/excel`, 'DepartmentPerformance.xlsx');
+  attachExport('exportDeptPDF', `${API_BASE}/api/attendance/export/department/pdf`, 'DepartmentPerformance.pdf');
+  attachExport('exportLateExcel', `${API_BASE}/api/attendance/export/late/excel`, 'LateMembers.xlsx');
+  attachExport('exportLatePDF', `${API_BASE}/api/attendance/export/late/pdf`, 'LateMembers.pdf');
 
   // Hide the red dot when reports are viewed
   const redDot = document.getElementById('reportsRedDot');
@@ -1192,7 +1412,7 @@ async function loadReports() {
 function loadQuickActions() {
   const sec = document.getElementById('quick-actions');
   if (!sec) return;
-	sec.innerHTML = `
+  sec.innerHTML = `
       <div class="dashboard-content">
         <h1 style="margin-bottom:1.5rem;"><i class='fas fa-bolt' style='color:var(--primary-color);margin-right:0.5rem;'></i>Quick Actions</h1>
         <div class="quick-actions-grid">
@@ -1200,7 +1420,6 @@ function loadQuickActions() {
           <button class="quick-action-btn" id="addAdminBtn"><i class="fas fa-user-shield"></i> <span>Add New Admin</span></button>
           <button class="quick-action-btn" id="updateEmployeeBtn"><i class="fas fa-user-edit"></i> <span>Update Employee Profile</span></button>
           <button class="quick-action-btn" id="showEmployeesBtn"><i class="fas fa-users"></i> <span>Employees Details Show</span></button>
-          <button class="quick-action-btn" id="removeEmployeeBtn"><i class="fas fa-user-minus"></i> <span>Employee Remove</span></button>
         </div>
       </div>
     `;
@@ -1261,7 +1480,7 @@ function loadQuickActions() {
     `;
     document.body.appendChild(modal);
     document.getElementById('closeAddEmployeeModal').onclick = () => modal.remove();
-    document.getElementById('addEmployeeForm').onsubmit = async function(e) {
+    document.getElementById('addEmployeeForm').onsubmit = async function (e) {
       e.preventDefault();
       const form = e.target;
       const empId = form.empId.value.trim();
@@ -1276,26 +1495,26 @@ function loadQuickActions() {
       let departmentId = null, positionId = null;
       try {
         // Try to find department
-        let depRes = await fetch(`${API_BASE}/api/departments`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+        let depRes = await fetch(`${API_BASE}/api/departments`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
         let depList = depRes.ok ? await depRes.json() : [];
         let dep = depList.find(d => d.name.toLowerCase() === departmentName.toLowerCase());
         if (!dep) {
           // Create department
-          let newDepRes = await fetch(`${API_BASE}/api/departments`, { method: 'POST', headers: { 'Content-Type':'application/json', ...authHeaders() }, body: JSON.stringify({ name: departmentName }) });
+          let newDepRes = await fetch(`${API_BASE}/api/departments`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ name: departmentName }) });
           dep = newDepRes.ok ? await newDepRes.json() : null;
         }
         departmentId = dep?._id;
-      } catch {}
+      } catch { }
       try {
-        let posRes = await fetch(`${API_BASE}/api/positions`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+        let posRes = await fetch(`${API_BASE}/api/positions`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
         let posList = posRes.ok ? await posRes.json() : [];
         let pos = posList.find(p => p.title.toLowerCase() === positionTitle.toLowerCase());
         if (!pos) {
-          let newPosRes = await fetch(`${API_BASE}/api/positions`, { method: 'POST', headers: { 'Content-Type':'application/json', ...authHeaders() }, body: JSON.stringify({ title: positionTitle }) });
+          let newPosRes = await fetch(`${API_BASE}/api/positions`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ title: positionTitle }) });
           pos = newPosRes.ok ? await newPosRes.json() : null;
         }
         positionId = pos?._id;
-      } catch {}
+      } catch { }
       // Determine role based on department or position
       let role = 'employee';
       const adminKeywords = ['admin', 'administrator', 'hr', 'human resources'];
@@ -1309,7 +1528,7 @@ function loadQuickActions() {
       try {
         const newEmpRes = await fetch(`${API_BASE}/api/employees`, {
           method: 'POST',
-          headers: { 'Content-Type':'application/json', ...authHeaders() },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({
             empId,
             password,
@@ -1349,7 +1568,7 @@ function loadQuickActions() {
     // Fetch employees
     let employees = [];
     try {
-      const res = await fetch(`${API_BASE}/api/employees`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
+      const res = await fetch(`${API_BASE}/api/employees`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
       if (res.ok) employees = await res.json();
     } catch (err) { /* ignore */ }
     const modal = document.createElement('div');
@@ -1380,7 +1599,7 @@ function loadQuickActions() {
     // Close on button click
     document.getElementById('closeAllEmployeesModal').onclick = () => modal.remove();
     // Close on overlay click (but not when clicking inside modal content)
-    modal.addEventListener('click', function(e) {
+    modal.addEventListener('click', function (e) {
       if (e.target === modal) modal.remove();
     });
   }
@@ -1388,19 +1607,19 @@ function loadQuickActions() {
 
   // Modal for removing employees
   async function showRemoveEmployeeModal() {
-      // Remove any existing modal
-      const old = document.getElementById('removeEmployeeModal');
-      if (old) old.remove();
-      // Fetch employees
-      let employees = [];
-      try {
-        const res = await fetch(`${API_BASE}/api/employees`, { headers: { 'Content-Type':'application/json', ...authHeaders() }});
-        if (res.ok) employees = await res.json();
-      } catch (err) { /* ignore */ }
-      const modal = document.createElement('div');
-      modal.id = 'removeEmployeeModal';
-      modal.className = 'employee-modal-overlay';
-      modal.innerHTML = `
+    // Remove any existing modal
+    const old = document.getElementById('removeEmployeeModal');
+    if (old) old.remove();
+    // Fetch employees
+    let employees = [];
+    try {
+      const res = await fetch(`${API_BASE}/api/employees`, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
+      if (res.ok) employees = await res.json();
+    } catch (err) { /* ignore */ }
+    const modal = document.createElement('div');
+    modal.id = 'removeEmployeeModal';
+    modal.className = 'employee-modal-overlay';
+    modal.innerHTML = `
         <div class="employee-modal-content" style="max-width:700px;">
           <button class="employee-modal-close" id="closeRemoveEmployeeModal"><i class="fas fa-times"></i></button>
           <h2><i class="fas fa-user-minus"></i> Remove Employee</h2>
@@ -1423,39 +1642,39 @@ function loadQuickActions() {
           </div>
         </div>
       `;
-      document.body.appendChild(modal);
-      // Close handlers
-      document.getElementById('closeRemoveEmployeeModal').onclick = () => modal.remove();
-      modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
-      // Search filter
-      document.getElementById('removeEmployeeSearch').oninput = function(e) {
-        const val = e.target.value.toLowerCase();
-        document.querySelectorAll('.employee-remove-item').forEach(item => {
-          const text = item.innerText.toLowerCase();
-          item.style.display = text.includes(val) ? '' : 'none';
-        });
-      };
-      // Delete handler (demo only)
-      document.querySelectorAll('.employee-remove-btn').forEach(btn => {
-        btn.onclick = async function() {
-          const id = btn.getAttribute('data-id');
-          if (!confirm('Are you sure you want to delete this employee?')) return;
-          try {
-            const res = await fetch(`${API_BASE}/api/employees/${id}`, {
-              method: 'DELETE',
-              headers: { 'Content-Type':'application/json', ...authHeaders() }
-            });
-            if (res.ok) {
-              btn.closest('.employee-remove-item').remove();
-              showAdminLeaveConfirmation('Employee removed!', true);
-            } else {
-              alert('Failed to delete employee');
-            }
-          } catch (err) {
-            alert('Server error');
-          }
-        };
+    document.body.appendChild(modal);
+    // Close handlers
+    document.getElementById('closeRemoveEmployeeModal').onclick = () => modal.remove();
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
+    // Search filter
+    document.getElementById('removeEmployeeSearch').oninput = function (e) {
+      const val = e.target.value.toLowerCase();
+      document.querySelectorAll('.employee-remove-item').forEach(item => {
+        const text = item.innerText.toLowerCase();
+        item.style.display = text.includes(val) ? '' : 'none';
       });
+    };
+    // Delete handler (demo only)
+    document.querySelectorAll('.employee-remove-btn').forEach(btn => {
+      btn.onclick = async function () {
+        const id = btn.getAttribute('data-id');
+        if (!confirm('Are you sure you want to delete this employee?')) return;
+        try {
+          const res = await fetch(`${API_BASE}/api/employees/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() }
+          });
+          if (res.ok) {
+            btn.closest('.employee-remove-item').remove();
+            showAdminLeaveConfirmation('Employee removed!', true);
+          } else {
+            alert('Failed to delete employee');
+          }
+        } catch (err) {
+          alert('Server error');
+        }
+      };
+    });
   }
 }
 
@@ -1498,7 +1717,7 @@ function showAddAdminModal() {
   `;
   document.body.appendChild(modal);
   document.getElementById('closeAddAdminModal').onclick = () => modal.remove();
-  document.getElementById('addAdminForm').onsubmit = async function(e) {
+  document.getElementById('addAdminForm').onsubmit = async function (e) {
     e.preventDefault();
     const form = e.target;
     const name = form.adminName.value.trim();
@@ -1520,7 +1739,7 @@ function showAddAdminModal() {
     try {
       const res = await fetch(`${API_BASE}/api/employees`, {
         method: 'POST',
-        headers: { 'Content-Type':'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           empId,
           password,
@@ -1638,7 +1857,7 @@ function loadSettings() {
   const changePasswordForm = document.getElementById('changePasswordForm');
 
   if (changePasswordForm) {
-    changePasswordForm.onsubmit = function(e) {
+    changePasswordForm.onsubmit = function (e) {
       e.preventDefault();
       // TODO: Implement backend API call for password change
       changePasswordModal.style.display = 'none';
@@ -1646,3 +1865,212 @@ function loadSettings() {
     };
   }
 }
+
+// Global function for opening Selfie Lightbox
+window.openSelfieModal = function (url) {
+  let modal = document.getElementById('selfieModalOverlay');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'selfieModalOverlay';
+    modal.className = 'selfie-modal-overlay';
+    modal.innerHTML = `
+      <div class="selfie-modal-content">
+        <button class="selfie-modal-close">&times;</button>
+        <img src="" class="selfie-modal-image" id="selfieModalImg">
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close on X btn
+    modal.querySelector('.selfie-modal-close').onclick = () => {
+      modal.style.display = 'none';
+    };
+    // Close on backdrop click
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    };
+  }
+
+  const img = document.getElementById('selfieModalImg');
+  if (img) img.src = url;
+  modal.style.display = 'flex';
+};
+
+// --- Metadata Viewer Modal ---
+window.showMetadataModal = function (meta) {
+  let modal = document.getElementById('metaModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'metaModal';
+    modal.className = 'employee-modal-overlay';
+    document.body.appendChild(modal);
+  }
+
+  // Format meta for display
+  const verification = meta?.verification || 'N/A';
+  const selfieUrl = meta?.selfieUrl || '';
+  const exif = meta?.exif || {};
+
+  // Flatten useful EXIF
+  let exifHtml = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; font-size:0.9rem;">';
+  for (const [key, val] of Object.entries(exif)) {
+    if (typeof val === 'object' && val !== null) {
+      exifHtml += `<div><b>${key}:</b> ${JSON.stringify(val).substring(0, 50)}</div>`;
+    } else {
+      exifHtml += `<div><b>${key}:</b> ${val}</div>`;
+    }
+  }
+  exifHtml += '</div>';
+
+  if (Object.keys(exif).length === 0) exifHtml = '<div style="color:#64748b;">No EXIF data extracted.</div>';
+
+  modal.innerHTML = `
+    <div class="employee-modal-content" style="max-width:600px;">
+      <button class="employee-modal-close" onclick="document.getElementById('metaModal').remove()"><i class="fas fa-times"></i></button>
+      <h2><i class="fas fa-camera"></i> Image Metadata</h2>
+      
+      <div style="margin-bottom:1.5rem; padding:1rem; background:#f8fafc; border-radius:8px; display:flex; gap:1rem; align-items:flex-start;">
+         ${selfieUrl ? `<a href="${selfieUrl}" target="_blank"><img src="${selfieUrl}" style="width:100px; height:100px; object-fit:cover; border-radius:8px; border:1px solid #e2e8f0;"></a>` : ''}
+         <div>
+            <div style="font-weight:600; color:#334155; margin-bottom:0.5rem;">Verification Status</div>
+            <div class="badge badge-${verification === 'verified' ? 'admin' : 'warning'}" style="font-size:1rem;">${verification.toUpperCase()}</div>
+         </div>
+      </div>
+
+      <h3 style="font-size:1.1rem; color:#475569; margin-bottom:0.5rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">EXIF & Device Data</h3>
+      <div style="background:#fff; border:1px solid #e2e8f0; padding:1rem; border-radius:8px; max-height:300px; overflow-y:auto;">
+        ${exifHtml}
+      </div>
+
+      <div style="margin-top:1.5rem; text-align:right;">
+        <button onclick="document.getElementById('metaModal').remove()" class="submit-btn" style="background:#64748b;">Close</button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+}
+
+/* ================= ADD EMPLOYEE MODAL ================= */
+window.openAddEmployeeModal = function () {
+  let modal = document.getElementById('addEmployeeModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    return;
+  }
+  modal = document.createElement('div');
+  modal.id = 'addEmployeeModal';
+  modal.className = 'settings-modal-overlay';
+  modal.style.zIndex = '10001';
+  modal.innerHTML = `
+    <div class="settings-modal-content" style="max-width:500px; width:90%;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <h2 style="margin:0; color:var(--primary-color);">Add New Employee</h2>
+        <button onclick="closeAddEmployeeModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      <form id="addEmployeeForm" onsubmit="handleNewEmployeeSubmit(event)">
+        <div class="employee-form-group" style="margin-bottom:1rem; display:flex; flex-direction:column;">
+            <label style="margin-bottom:0.3rem; font-weight:600;">Employee ID</label>
+            <input type="text" name="empId" required placeholder="e.g. EMP001" style="padding:0.6rem; border:1px solid #ccc; border-radius:6px;">
+        </div>
+        <div class="employee-form-group" style="margin-bottom:1rem; display:flex; flex-direction:column;">
+            <label style="margin-bottom:0.3rem; font-weight:600;">First Name</label>
+            <input type="text" name="firstName" required placeholder="John" style="padding:0.6rem; border:1px solid #ccc; border-radius:6px;">
+        </div>
+        <div class="employee-form-group" style="margin-bottom:1rem; display:flex; flex-direction:column;">
+            <label style="margin-bottom:0.3rem; font-weight:600;">Last Name</label>
+            <input type="text" name="lastName" required placeholder="Doe" style="padding:0.6rem; border:1px solid #ccc; border-radius:6px;">
+        </div>
+        <div class="employee-form-group" style="margin-bottom:1rem; display:flex; flex-direction:column;">
+            <label style="margin-bottom:0.3rem; font-weight:600;">Email</label>
+            <input type="email" name="email" required placeholder="john@example.com" style="padding:0.6rem; border:1px solid #ccc; border-radius:6px;">
+        </div>
+        <div class="employee-form-group" style="margin-bottom:1rem; display:flex; flex-direction:column;">
+            <label style="margin-bottom:0.3rem; font-weight:600;">Department</label>
+            <input type="text" name="department" placeholder="Engineering" style="padding:0.6rem; border:1px solid #ccc; border-radius:6px;">
+        </div>
+         <div class="employee-form-group" style="margin-bottom:1rem; display:flex; flex-direction:column;">
+            <label style="margin-bottom:0.3rem; font-weight:600;">Role</label>
+            <select name="role" style="padding:0.6rem; border:1px solid #ccc; border-radius:6px;">
+                <option value="employee">Employee</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <div class="employee-form-group" style="margin-bottom:1.5rem; display:flex; flex-direction:column;">
+            <label style="margin-bottom:0.3rem; font-weight:600;">Password</label>
+            <input type="password" name="password" required placeholder="********" style="padding:0.6rem; border:1px solid #ccc; border-radius:6px;">
+        </div>
+        <div style="text-align:right;">
+            <button type="button" onclick="closeAddEmployeeModal()" style="margin-right:1rem; padding:0.6rem 1.2rem; border:none; background:#eee; cursor:pointer; border-radius:6px;">Cancel</button>
+            <button type="submit" style="padding:0.6rem 1.2rem; border:none; background:var(--primary-color); color:#fff; cursor:pointer; border-radius:6px;">Create Employee</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+};
+
+window.closeAddEmployeeModal = function () {
+  const modal = document.getElementById('addEmployeeModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.handleNewEmployeeSubmit = async function (e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  const originalText = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = 'Creating...';
+
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData.entries());
+
+  try {
+    const res = await fetch(`${API_BASE}/api/employees`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(data)
+    });
+
+    if (res.ok) {
+      alert("Employee created successfully!");
+      closeAddEmployeeModal();
+      e.target.reset();
+      loadEmployeesList(); // Refresh list
+    } else {
+      const err = await res.json();
+      alert("Error: " + (err.message || 'Failed to create employee'));
+    }
+  } catch (error) {
+    console.error(error);
+    alert("Server error");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = originalText;
+  }
+};
+/* ================= MOUSE GLOW EFFECT ================= */
+(function initMouseGlow() {
+  const glow = document.createElement('div');
+  glow.classList.add('mouse-glow');
+  document.body.appendChild(glow);
+
+  let mouseX = 0, mouseY = 0;
+  let currentX = 0, currentY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  function animate() {
+    currentX += (mouseX - currentX) * 0.1;
+    currentY += (mouseY - currentY) * 0.1;
+
+    // Use fixed positioning update
+    // We set left/top to 0 in CSS and use transform for performance
+    glow.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%)`;
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();

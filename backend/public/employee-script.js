@@ -303,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDashboardWidgets();
     fetchAndSetClockStatus();
     initClockButton();
+    loadRecentActivity(); // New: Load activity on init
   }
 
   // ===== HEADER ACTIONS: BELL (NOTIFICATIONS) & ENVELOPE (MESSAGES) =====
@@ -404,47 +405,10 @@ function updateRealTimeClock() {
 setInterval(updateRealTimeClock, 1000);
 updateRealTimeClock();
 
-// Clock In/Out Button Logic
-const clockInOutBtn = document.getElementById('clockInOutBtn');
-const clockInOutText = document.getElementById('clockInOutText');
-if (clockInOutBtn && clockInOutText) {
-  // Fetch current status on load
-  fetchWithAuth('/api/attendance/status', { credentials: 'include' })
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.status === 'in') {
-        clockInOutText.textContent = 'Clock Out';
-      } else {
-        clockInOutText.textContent = 'Clock In';
-      }
-    });
+// Clock In/Out Button Logic Removed by User Request
+// const clockInOutBtn = document.getElementById('clockInOutBtn');
+// ... logic removed ...
 
-  clockInOutBtn.addEventListener('click', () => {
-    // Use correct backend endpoint names
-    const user = JSON.parse(localStorage.getItem('nxt_user'));
-    if (!user || !user.empId) {
-      alert('User not found');
-      return;
-    }
-    const action = clockInOutText.textContent === 'Clock In' ? 'checkin' : 'checkout';
-    fetchWithAuth(`/api/attendance/${action}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ empId: user.empId }),
-      credentials: 'include'
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success || data._id) {
-          clockInOutText.textContent = action === 'checkin' ? 'Clock Out' : 'Clock In';
-          // Optionally refresh widgets or show a toast
-        } else {
-          alert(data.message || 'Operation failed.');
-        }
-      })
-      .catch(() => alert('Network error.'));
-  });
-}
 
 // Quick Action Option Buttons
 const viewAttendanceBtn = document.getElementById('viewAttendanceBtn');
@@ -524,103 +488,92 @@ async function fetchAndSetClockStatus() {
   }
 }
 // ===== CLOCK IN/OUT BUTTON LOGIC ON DASHBOARD =====
+// Clock In/Out Button Logic
+// Clock In/Out Button Logic
 function initClockButton() {
   const btn = document.getElementById('clockButton');
   if (!btn) return;
   btn.addEventListener('click', async function () {
-    // Always fetch backend status to determine action
     const user = JSON.parse(localStorage.getItem('nxt_user'));
     if (!user) {
       alert('User not found');
       return;
     }
+
+    // Check current state (Simple status check)
     let isClockedIn = false;
     try {
-      const statusRes = await fetchWithAuth(`${API_BASE}/api/attendance/status/${user.empId}`, {
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (statusRes.ok) {
-        const statusData = await statusRes.json();
-        isClockedIn = !!statusData.clockedIn;
-      }
-    } catch (e) {
-      isClockedIn = false;
-    }
+      const statusRes = await fetchWithAuth(`${API_BASE}/api/attendance/status/${user.empId}`, { headers: { 'Content-Type': 'application/json' } });
+      const statusData = await statusRes.json();
+      isClockedIn = statusData.clockedIn;
+    } catch { isClockedIn = false; }
+
     if (isClockedIn) {
-      // Normal clock out (keep as is for now)
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-      try {
-        const url = `${API_BASE}/api/attendance/checkout`;
-        const res = await fetchWithAuth(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ empId: user.empId })
-        });
-        let data = {};
-        try { data = await res.json(); } catch (e) { data = {}; }
-        if (!res.ok) {
-          showAttendanceStatusMessage((data && data.message) ? data.message : 'Check-out failed', 'error');
-        } else {
-          showAttendanceStatusMessage('Checked out successfully.', 'success');
-        }
-      } catch (err) {
-        showAttendanceStatusMessage('Server error: ' + (err && err.message ? err.message : err), 'error');
-      } finally {
-        btn.disabled = false;
-        await fetchAndSetClockStatus();
-      }
-      return;
-    }
-    // If clocking in, open selfie modal for capture/upload
-    showSelfieModal(async (imageBlob, meta) => {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-      try {
-        // Prepare FormData
-        const formData = new FormData();
-        formData.append('employeeId', user.empId);
-        const now = new Date();
-        formData.append('date', now.toISOString().slice(0, 10));
-        formData.append('checkInTime', now.toTimeString().slice(0, 8));
-        formData.append('image', imageBlob, 'selfie.jpg');
-        formData.append('metaData', JSON.stringify(meta));
-        const res = await fetchWithAuth(`${API_BASE}/api/attendance/clock-in`, {
-          method: 'POST',
-          headers: { ...authHeaders() },
-          body: formData
-        });
-        let data = {};
-        try { data = await res.json(); } catch (e) { data = {}; }
-        if (!res.ok) {
-          showAttendanceStatusMessage((data && data.message) ? data.message : 'Clock-in failed', 'error');
-        } else {
-          let msg = 'Clocked in successfully.';
-          let type = 'success';
-          if (data.status === 'present') {
-            msg = 'Present: You have clocked in on time.';
-            type = 'success';
-          } else if (data.status === 'late') {
-            msg = 'Late login: You have clocked in late.';
-            type = 'warning';
-          } else if (data.status === 'out_of_office') {
-            msg = 'Out of office: Location not matched.';
-            type = 'error';
-          } else if (data.message) {
-            msg = data.message;
-            type = 'info';
+      // --- CLOCK OUT (Confirmation Needed) ---
+      showClockOutConfirmation(async () => {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clocking Out...';
+        try {
+          const res = await fetchWithAuth(`${API_BASE}/api/attendance/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ empId: user.empId })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            showAttendanceStatusMessage('Checked out successfully.', 'success');
+          } else {
+            showAttendanceStatusMessage(data.message || 'Checkout failed', 'error');
           }
-          showAttendanceStatusMessage(msg, type);
+        } catch (err) {
+          showAttendanceStatusMessage('Server error during checkout', 'error');
         }
-      } catch (err) {
-        showAttendanceStatusMessage('Server error: ' + (err && err.message ? err.message : err), 'error');
-      } finally {
         btn.disabled = false;
         await fetchAndSetClockStatus();
-      }
-    });
+      });
+
+    } else {
+      // --- CLOCK IN (Trigger Selfie/Upload Modal) ---
+      // Instead of direct API call, show modal.
+      showSelfieModal(async (imageBlob) => {
+        // This callback runs when user confirms photo/upload
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+        const formData = new FormData();
+        formData.append('empId', user.empId);
+        formData.append('image', imageBlob, 'selfie.jpg');
+
+        try {
+          const res = await fetch(`${API_BASE}/api/attendance/clock-in-selfie`, {
+            method: 'POST',
+            headers: { ...authHeaders() }, // Do NOT set Content-Type for FormData, browser sets it with boundary
+            body: formData
+          });
+          const data = await res.json();
+
+          if (res.ok) {
+            let msg = data.message || 'Clock In Successful';
+            let type = 'success';
+            if (data.status === 'late') type = 'warning';
+            showAttendanceStatusMessage(msg, type);
+          } else {
+            showAttendanceStatusMessage(data.message || 'Clock In Failed', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          showAttendanceStatusMessage('Server error during clock in', 'error');
+        }
+
+        btn.disabled = false;
+        await fetchAndSetClockStatus();
+      });
+    }
   });
 }
+
+
+
 
 // --- Attendance Status Message Logic ---
 function showAttendanceStatusMessage(message, type = 'info') {
@@ -652,214 +605,107 @@ function showSelfieModal(onConfirm) {
   const canvas = document.getElementById('selfieCanvas');
   const preview = document.getElementById('selfiePreview');
   const fileInput = document.getElementById('selfieFileInput');
+
   const startCameraBtn = document.getElementById('startCameraBtn');
   const uploadPhotoBtn = document.getElementById('uploadPhotoBtn');
-  const captureBtns = document.getElementById('selfieCaptureBtns');
-  const confirmBtns = document.getElementById('selfieConfirmBtns');
   const captureBtn = document.getElementById('captureSelfieBtn');
-  const cancelCameraBtn = document.getElementById('cancelCameraBtn');
-  const confirmSelfieBtn = document.getElementById('confirmSelfieBtn');
-  const retakeSelfieBtn = document.getElementById('retakeSelfieBtn');
+  const cancelBtn = document.getElementById('cancelCameraBtn');
+  const confirmBtn = document.getElementById('confirmSelfieBtn');
+  const retakeBtn = document.getElementById('retakeSelfieBtn');
   const closeBtn = document.getElementById('closeSelfieModalBtn');
+
+  const initialBtns = document.getElementById('initialBtns');
+  const captureBtns = document.getElementById('captureBtns');
+  const confirmBtns = document.getElementById('confirmBtns');
+
   let stream = null;
   let imageBlob = null;
-  let meta = {};
-  function resetModal() {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      stream = null;
-    }
-    video.style.display = 'none';
-    canvas.style.display = 'none';
-    preview.style.display = 'none';
+
+  function resetModalUI() {
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    video.classList.add('hidden');
+    canvas.classList.add('hidden');
+    preview.classList.add('hidden');
     fileInput.value = '';
+
+    initialBtns.classList.remove('hidden');
+    captureBtns.classList.add('hidden');
+    confirmBtns.classList.add('hidden');
     imageBlob = null;
-    meta = {};
-    captureBtns.style.display = 'none';
-    confirmBtns.style.display = 'none';
-    startCameraBtn.style.display = '';
-    uploadPhotoBtn.style.display = '';
   }
-  function openModal() {
-    modal.classList.add('active');
-    resetModal();
-  }
-  function closeModal() {
-    modal.classList.remove('active');
-    resetModal();
-  }
+
+  function open() { modal.classList.remove('hidden'); modal.style.display = 'flex'; resetModalUI(); }
+  function close() { modal.classList.add('hidden'); modal.style.display = 'none'; resetModalUI(); }
+
+  // Handlers
   startCameraBtn.onclick = async () => {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: true });
       video.srcObject = stream;
-      video.style.display = '';
-      captureBtns.style.display = '';
-      startCameraBtn.style.display = 'none';
-      uploadPhotoBtn.style.display = 'none';
+      video.classList.remove('hidden');
+      preview.classList.add('hidden');
+      initialBtns.classList.add('hidden');
+      captureBtns.classList.remove('hidden');
     } catch (e) {
-      alert('Unable to access camera.');
+      alert('Camera access denied or unavailable.');
     }
   };
-  uploadPhotoBtn.onclick = () => {
-    fileInput.click();
-  };
-  fileInput.onchange = () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      preview.src = e.target.result;
-      preview.style.display = '';
+
+  uploadPhotoBtn.onclick = () => fileInput.click();
+
+  fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
       imageBlob = file;
-      collectSelfieMeta(file, function (metaResult) {
-        meta = metaResult;
-        confirmBtns.style.display = '';
-        startCameraBtn.style.display = 'none';
-        uploadPhotoBtn.style.display = 'none';
-      });
-    };
-    reader.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        preview.src = evt.target.result;
+        preview.classList.remove('hidden');
+        initialBtns.classList.add('hidden');
+        confirmBtns.classList.remove('hidden');
+      }
+      reader.readAsDataURL(file);
+    }
   };
+
   captureBtn.onclick = () => {
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
     canvas.toBlob(blob => {
       imageBlob = blob;
       preview.src = canvas.toDataURL('image/jpeg');
-      preview.style.display = '';
-      video.style.display = 'none';
-      canvas.style.display = 'none';
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-      }
-      collectSelfieMeta(blob, function (metaResult) {
-        meta = metaResult;
-        confirmBtns.style.display = '';
-        captureBtns.style.display = 'none';
-      });
+      preview.classList.remove('hidden');
+      video.classList.add('hidden');
+      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      captureBtns.classList.add('hidden');
+      confirmBtns.classList.remove('hidden');
     }, 'image/jpeg', 0.95);
   };
-  cancelCameraBtn.onclick = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      stream = null;
+
+  cancelBtn.onclick = () => resetModalUI();
+  retakeBtn.onclick = () => resetModalUI();
+
+  confirmBtn.onclick = () => {
+    if (!imageBlob) return alert('No image selected');
+    if (!(imageBlob instanceof Blob)) {
+      console.error('Invalid image data:', imageBlob);
+      return alert('Image data invalid. Please retake/upload.');
     }
-    video.style.display = 'none';
-    captureBtns.style.display = 'none';
-    startCameraBtn.style.display = '';
-    uploadPhotoBtn.style.display = '';
+    const blobToSend = imageBlob; // Capture value before resetModalUI nulls it
+    close();
+    onConfirm(blobToSend);
   };
-  confirmSelfieBtn.onclick = async () => {
-    // Validation: require photo
-    if (!imageBlob) {
-      alert('You must take or upload a photo to clock in.');
-      return;
-    }
-    // Validation: check timestamp (within 5 minutes of now)
-    const now = Date.now();
-    let metaTime = null;
-    if (meta.capturedAt) {
-      metaTime = new Date(meta.capturedAt).getTime();
-    } else if (meta.timestamp) {
-      metaTime = new Date(meta.timestamp).getTime();
-    }
-    // if (metaTime && Math.abs(now - metaTime) > 24 * 60 * 60 * 1000) {
-    //   alert('Photo capture time is too far from current time. Please use a recent photo (within 24 hours).');
-    //   return;
-    // }
-    // Validation: require GPS if mandatory (set to true to enforce)
-    const requireGPS = false; // set to true if GPS is mandatory
-    if (requireGPS && !(meta.gps || meta.geo)) {
-      alert('GPS location is required. Please enable location and try again.');
-      return;
-    }
-    // Optionally get geolocation
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          meta.geo = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-          closeModal();
-          onConfirm(imageBlob, meta);
-        },
-        () => {
-          closeModal();
-          onConfirm(imageBlob, meta);
-        },
-        { timeout: 3000 }
-      );
-    } else {
-      closeModal();
-      onConfirm(imageBlob, meta);
-    }
-  };
-  retakeSelfieBtn.onclick = () => {
-    resetModal();
-  };
-  closeBtn.onclick = () => {
-    closeModal();
-  };
-  openModal();
+
+  closeBtn.onclick = close;
+
+  open();
 }
 
 
-function collectSelfieMeta(fileOrBlob, callback) {
-  // Use EXIF.js to extract metadata
-  const meta = {
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    fileType: fileOrBlob.type,
-    fileSize: fileOrBlob.size,
-    imageHash: '', // Optionally implement hash
-    exif: {},
-    gps: null,
-    deviceModel: '',
-    resolution: '',
-    capturedAt: '',
-  };
 
-  if (fileOrBlob && window.EXIF) {
-    try {
-      // EXIF.getData supports standard File/Blob objects directly
-      EXIF.getData(fileOrBlob, function () {
-        try {
-          // 'this' refers to the file object with extracted metadata
-          const tags = EXIF.getAllTags(this);
-          if (tags) {
-            meta.exif = tags;
-            if (tags.DateTimeOriginal) meta.capturedAt = tags.DateTimeOriginal;
-            if (tags.Model) meta.deviceModel = tags.Model;
 
-            if (tags.GPSLatitude && tags.GPSLongitude) {
-              // Convert GPS to decimal
-              function dmsToDecimal(dms, ref) {
-                if (!dms) return 0;
-                let d = dms[0] || 0, m = dms[1] || 0, s = dms[2] || 0;
-                let dec = d + m / 60 + s / 3600;
-                if (ref === 'S' || ref === 'W') dec = -dec;
-                return dec;
-              }
-              meta.gps = {
-                lat: dmsToDecimal(tags.GPSLatitude, tags.GPSLatitudeRef),
-                lon: dmsToDecimal(tags.GPSLongitude, tags.GPSLongitudeRef)
-              };
-            }
-            if (tags.PixelXDimension && tags.PixelYDimension) {
-              meta.resolution = `${tags.PixelXDimension}x${tags.PixelYDimension}`;
-            }
-          }
-        } catch (e) {
-          console.warn('Error parsing EXIF tags', e);
-        }
-        callback(meta);
-      });
-    } catch (err) {
-      console.warn('EXIF.getData failed', err);
-      callback(meta);
-    }
-  } else {
-    callback(meta);
-  }
-}
+
+// collectSelfieMeta removed
+
 
 
 // ===== DASHBOARD WIDGETS: Clock, Week Range, Calendar =====
@@ -935,85 +781,217 @@ function loadSectionContent(sectionId) {
   }
 }
 
-/* ===== DASHBOARD: load summary counts ===== */
+/* ===== DASHBOARD: load summary counts & stats ===== */
 async function loadDashboard() {
   try {
-    const res = await fetch(`${API_BASE}/api/attendance/summary/today`, {
-      headers: { 'Content-Type': 'application/json', ...authHeaders() }
-    });
-    if (!res.ok) return;
-    const json = await res.json();
-    // update elements if present
-    const presentEl = document.getElementById('presentCount');
-    const absentEl = document.getElementById('absentCount');
-    const leaveEl = document.getElementById('leaveCount');
-    if (presentEl) presentEl.innerText = json.present ?? 0;
-    if (absentEl) absentEl.innerText = json.absent ?? 0;
-    if (leaveEl) leaveEl.innerText = json.onLeave ?? 0;
-  } catch (err) {
-    console.error('Dashboard load error', err);
-  }
+    // 1. Load today's counts (Present/Absent/Leave) - Keep using summary/today or my-stats?
+    // The previous summary/today was likely global or generic. 
+    // If we want PERSONAL counts (e.g. "Present: 1" if I am present), we can use my-stats?
+    // No, the widgets (Time, Week, Calendar) are static. The Stats Grid (Total Absent, Pending Leaves) needs data.
 
-  // Chart button logic for attendance and on-time rate
-  function setActiveChartBtn(group, period) {
-    document.querySelectorAll(group + ' .chart-btn').forEach(btn => {
-      if (btn.dataset.period === period) btn.classList.add('active');
-      else btn.classList.remove('active');
-    });
-  }
+    // Existing summary/today endpoint returns { present, absent, onLeave } counts.
+    // If this is the "Present Today" widget showing global count, let's keep it.
+    // If this is checking IF the user is present, that's different.
+    // Assuming the "Present Today" (etc) in the dashboard are global counts (common in admin dashboards, maybe less in employee?).
+    // However, the "Attendance Rate" card likely refers to the employee's OWN rate.
 
-  // Update attendance gauge (placeholder logic)
-  async function updateAttendanceGauge(period) {
-    let present = 0, total = 1;
-    if (period === 'today') {
-      present = Number(document.getElementById('presentCount')?.innerText || 0);
-      total = present + Number(document.getElementById('absentCount')?.innerText || 0) + Number(document.getElementById('leaveCount')?.innerText || 0);
-    } else {
-      // Placeholder: fetch or simulate week/month data
-      // TODO: Replace with real API endpoints if available
-      present = Math.floor(Math.random() * 10) + 10;
-      total = present + Math.floor(Math.random() * 5) + 5;
+    // Let's keep the widget data fetching as is (global vs personal ambiguity aside).
+    const res = await fetchWithAuth(`${API_BASE}/api/attendance/summary/today`);
+    if (res.ok) {
+      const json = await res.json();
+      const presentEl = document.getElementById('presentCount'); // These IDs might be in the LEGEND of the chart?
+      const absentEl = document.getElementById('absentCount');
+      const leaveEl = document.getElementById('leaveCount');
+      // If these are legend counts for the rate chart, they should come from my-stats.
+      // If they are separate widgets... let's see HTML.
+      // HTML Line 230: <div class="legend-item"><span>Present: <span id="presentCount">0</span></span></div>
+      // These are definitely LEGEND items for the Attendance Rate chart.
+      // So they should reflect the graph data (My Stats), not global.
+
+      // I will update them inside loadMyStats instead.
     }
-    const percent = total > 0 ? Math.round((present / total) * 100) : 0;
-    document.getElementById('gaugePercentage').innerText = percent + '%';
-    // Optionally update the canvas gauge here
-  }
+  } catch (e) {/* ignore */ }
 
-  // Update on-time gauge (placeholder logic)
-  async function updateOnTimeGauge(period) {
-    let onTime = 0, total = 1;
-    if (period === 'today') {
-      onTime = Math.floor(Math.random() * 10) + 5;
-      total = onTime + Math.floor(Math.random() * 5) + 5;
-    } else {
-      // Placeholder: fetch or simulate week/month data
-      onTime = Math.floor(Math.random() * 10) + 10;
-      total = onTime + Math.floor(Math.random() * 5) + 5;
-    }
-    const percent = total > 0 ? Math.round((onTime / total) * 100) : 0;
-    document.getElementById('ontimePercentage').innerText = percent + '%';
-    // Optionally update the canvas gauge here
-  }
 
-  // Attach event listeners for attendance rate chart buttons
-  document.querySelectorAll('.chart-card .chart-btn').forEach(btn => {
-    btn.addEventListener('click', async function () {
-      const group = this.closest('.chart-card');
-      const header = group.querySelector('.chart-header h3').innerText.toLowerCase();
-      const period = this.dataset.period;
-      setActiveChartBtn('.chart-card[data-type="' + header + '"]', period);
-      if (header.includes('attendance')) {
-        await updateAttendanceGauge(period);
-      } else if (header.includes('on-time')) {
-        await updateOnTimeGauge(period);
-      }
+  // 2. Load My Stats
+  loadMyStats('today'); // Default to today to match UI
+
+  // Attach Listeners to Chart Buttons
+  // Use a unique attribute to avoid double binding if loadDashboard is called multiple times
+  if (!window.dashboardListenersAttached) {
+    document.querySelectorAll('.chart-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        // 1. Handle Active Class
+        e.target.parentNode.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+
+        // 2. Determine functionality (Attendance vs OnTime is distinguished by the card context)
+        const period = e.target.dataset.period;
+
+        currentStatsPeriod = period; // Update global state
+
+        // Since loadMyStats fetches ALL stats, we can just call it. 
+        // However, if we want to change ONLY the context of one chart...
+        // The backend wraps both stats in one call.
+        // Ideally we should have separate calls or just refresh both.
+        // Refreshing both is simpler and acceptable.
+        loadMyStats(period);
+
+        // Sync buttons in the other card to match period? 
+        // Or allow mixed periods? 
+        // If mixed periods allowed, I need separate calls or a backend that accepts "attendancePeriod" and "ontimePeriod".
+        // My backend takes ?period=... and returns both.
+        // So I will sync the UI: set active class on other card buttons too.
+        document.querySelectorAll(`.chart-btn[data-period="${period}"]`).forEach(b => {
+          b.classList.add('active');
+          b.parentNode.querySelectorAll('.chart-btn').forEach(sibling => {
+            if (sibling !== b) sibling.classList.remove('active');
+          });
+        });
+      });
     });
-  });
-
-  // Initial load for both gauges
-  await updateAttendanceGauge('today');
-  await updateOnTimeGauge('today');
+    window.dashboardListenersAttached = true;
+  }
 }
+
+async function loadMyStats(period) {
+  try {
+    const res = await fetchWithAuth(`${API_BASE}/api/attendance/my-stats?period=${period}`);
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // --- 1. Attendance Rate ---
+    const attRate = parseFloat(data.attendanceRate || 0);
+    renderGauge('attendanceGauge', attRate, '#10b981'); // Green
+
+    const attText = document.getElementById('gaugePercentage');
+    if (attText) attText.innerText = attRate + '%';
+
+    // Update Legend for Attendance
+    const presentEl = document.getElementById('presentCount');
+    const absentEl = document.getElementById('absentCount'); // This might differ from "Total Absent" widget
+    const leaveEl = document.getElementById('leaveCount');
+
+    if (presentEl) presentEl.innerText = data.daysPresent;
+    // absentCount in legend is usually TotalDays - Present - Leave?
+    // My backend returns lateCount.
+    // Let's infer absent = (totalDays - daysPresent). (Ignoring leaves calculation for simplicity if not provided)
+    const absentCount = (data.totalDays || 0) - (data.daysPresent || 0);
+    // backend sends precise totalAbsent now, but let's stick to received data if possible or fallback
+    if (absentEl) absentEl.innerText = data.totalAbsent !== undefined ? data.totalAbsent : 0;
+
+    if (leaveEl) leaveEl.innerText = data.daysOnLeave !== undefined ? data.daysOnLeave : 0;
+
+
+    // --- 2. On Time Rate ---
+    const onTimeRate = parseFloat(data.onTimeRate || 0);
+    renderGauge('ontimeGauge', onTimeRate, '#3b82f6'); // Blue
+
+    const timeText = document.getElementById('ontimePercentage');
+    if (timeText) timeText.innerText = onTimeRate + '%';
+
+    // Update Legend for On Time
+    const onTimeEl = document.getElementById('onTimeCount');
+    const lateEl = document.getElementById('lateCount');
+    if (onTimeEl) onTimeEl.innerText = data.onTimeCount;
+    if (lateEl) lateEl.innerText = data.lateCount;
+
+    // --- 3. Stats Grid (New) ---
+    // Use animation for better UX
+    animateCounter('totalAbsent', data.totalAbsent || 0);
+    animateCounter('pendingLeaves', data.pendingLeaves || 0);
+    animateCounter('avgWorkHours', data.avgWorkHours || 0, 'h');
+
+  } catch (e) {
+    console.error('Stats load error', e);
+  }
+}
+
+// Counter Animation Helper
+function animateCounter(id, target, suffix = '') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const start = parseFloat(el.innerText) || 0;
+  const end = parseFloat(target);
+  if (isNaN(end)) return;
+  if (start === end) {
+    el.innerText = end + suffix;
+    return;
+  }
+
+  const duration = 1000;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // Ease out quart
+    const ease = 1 - Math.pow(1 - progress, 4);
+
+    const current = start + (end - start) * ease;
+
+    // Format: decimals if needed
+    const isFloat = end % 1 !== 0;
+    el.innerText = (isFloat ? current.toFixed(1) : Math.round(current)) + suffix;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      el.innerText = end + suffix;
+    }
+  }
+  requestAnimationFrame(update);
+}
+
+// Global state for period
+let currentStatsPeriod = 'today';
+
+// Auto-refresh stats every 30 seconds
+setInterval(() => {
+  if (document.getElementById('dashboard')?.classList.contains('active')) {
+    loadMyStats(currentStatsPeriod);
+  }
+}, 30000);
+
+// Render Gauge (Semi-Circle to match design)
+function renderGauge(canvasId, percent, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Set high resolution
+  if (canvas.width !== 300) { canvas.width = 300; canvas.height = 150; }
+
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Background Arc (Gray)
+  ctx.beginPath();
+  // Arc: x, y, radius, startAngle, endAngle
+  ctx.arc(w / 2, h, h - 20, Math.PI, 0);
+  ctx.lineWidth = 25;
+  ctx.strokeStyle = '#f3f4f6';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Progress Arc (Color)
+  if (percent > 0) {
+    ctx.beginPath();
+    // Calculate end angle: Start at PI (left), go clockwise.
+    // Span is PI. Percent 100% -> 0. 50% -> 1.5 PI (top).
+    // Formula: Math.PI + (percent/100 * Math.PI)
+    const endAngle = Math.PI + ((percent / 100) * Math.PI);
+    ctx.arc(w / 2, h, h - 20, Math.PI, endAngle);
+    ctx.lineWidth = 25;
+    ctx.strokeStyle = color;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+}
+
 
 /* ===== PROFILE ===== */
 async function loadProfile() {
@@ -1029,16 +1007,48 @@ async function loadProfile() {
     const u = await res.json();
     sec.innerHTML = `
       <div class="dashboard-content">
-        <h1 class="profile-title">My Profile</h1>
-        <div class="profile-card">
-          <div class="profile-avatar"><i class="fas fa-user-circle"></i></div>
-          <div class="profile-details">
-            <div class="profile-row"><span class="profile-label">Name:</span> <span class="profile-value">${u.firstName ?? ''} ${u.lastName ?? ''}</span></div>
-            <div class="profile-row"><span class="profile-label">Employee ID:</span> <span class="profile-value">${u.empId}</span></div>
-            <div class="profile-row"><span class="profile-label">Email:</span> <span class="profile-value">${u.email ?? '—'}</span></div>
-            <div class="profile-row"><span class="profile-label">Mobile:</span> <span class="profile-value">${u.phone ?? '—'}</span></div>
-            <div class="profile-row"><span class="profile-label">Department:</span> <span class="profile-value">${u.department ? (u.department.name || '—') : '—'}</span></div>
+        <h1 class="profile-title"><i class="fas fa-id-card"></i> My Profile</h1>
+        <div class="profile-card" style="display:flex; flex-direction:column; gap:2rem; max-width:800px;">
+          
+          <div style="display:flex; align-items:center; gap:2rem; padding-bottom:2rem; border-bottom:1px solid #eee;">
+             <div class="profile-avatar" style="width:100px; height:100px; font-size:3rem;"><i class="fas fa-user-circle"></i></div>
+             <div>
+                <h2 style="margin:0; font-size:1.8rem; color:#1e293b;">${u.firstName ?? ''} ${u.lastName ?? ''}</h2>
+                <div style="color:#64748b; font-size:1.1rem; margin-top:0.4rem;">${u.role ? u.role.toUpperCase() : 'EMPLOYEE'}</div>
+             </div>
           </div>
+
+          <div class="profile-details-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem;">
+            <div class="profile-item">
+              <label style="display:block; color:#64748b; font-size:0.9rem; margin-bottom:0.3rem;">Employee ID</label>
+              <div style="font-weight:600; font-size:1.1rem; color:#334155;">${u.empId}</div>
+            </div>
+            <div class="profile-item">
+               <label style="display:block; color:#64748b; font-size:0.9rem; margin-bottom:0.3rem;">Email Address</label>
+               <div style="font-weight:600; font-size:1.1rem; color:#334155;">${u.email ?? '—'}</div>
+            </div>
+            <div class="profile-item">
+               <label style="display:block; color:#64748b; font-size:0.9rem; margin-bottom:0.3rem;">Mobile Number</label>
+               <div style="font-weight:600; font-size:1.1rem; color:#334155;">${u.phone || '—'}</div>
+            </div>
+            <div class="profile-item">
+               <label style="display:block; color:#64748b; font-size:0.9rem; margin-bottom:0.3rem;">Designation</label>
+               <div style="font-weight:600; font-size:1.1rem; color:#334155;">${u.position?.name || 'Developer'}</div>
+            </div>
+            <div class="profile-item">
+               <label style="display:block; color:#64748b; font-size:0.9rem; margin-bottom:0.3rem;">Department</label>
+               <div style="font-weight:600; font-size:1.1rem; color:#334155;">${u.department ? (u.department.name || u.department) : '—'}</div>
+            </div>
+             <div class="profile-item">
+               <label style="display:block; color:#64748b; font-size:0.9rem; margin-bottom:0.3rem;">Joining Date</label>
+               <div style="font-weight:600; font-size:1.1rem; color:#334155;">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</div>
+            </div>
+            <div class="profile-item">
+               <label style="display:block; color:#64748b; font-size:0.9rem; margin-bottom:0.3rem;">Account Status</label>
+               <div style="font-weight:600; font-size:1.1rem; color:#10b981;">Active</div>
+            </div>
+          </div>
+
         </div>
       </div>
     `;
@@ -1186,8 +1196,9 @@ function loadReports() {
   `;
   loadLeaveReports();
   loadAdminMessages();
-  loadAdminTasks();
-  loadOtherOps();
+  // Removed fake tasks and ops
+  // loadAdminTasks(); 
+  // loadOtherOps();
 }
 
 // Fetch and display admin messages for the employee
@@ -1222,47 +1233,14 @@ async function loadAdminMessages() {
   }
 }
 
-// Dummy admin tasks loader (replace with real API if available)
+// Deprecated fake loaders
 function loadAdminTasks() {
   const container = document.getElementById('adminTasks');
-  if (!container) return;
-  // Example data
-  const tasks = [
-    { title: 'Profile Update Approval', status: 'pending', date: '2025-11-20' },
-    { title: 'Document Submission', status: 'approved', date: '2025-11-15' }
-  ];
-  if (!tasks.length) {
-    container.innerHTML = '<div class="report-empty">No admin tasks found.</div>';
-    return;
-  }
-  container.innerHTML = tasks.map(t => `
-    <div class="report-admin-task-card ${t.status}">
-      <div class="task-title">${t.title}</div>
-      <div class="task-date">${t.date}</div>
-      <span class="task-status ${t.status}">${t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
-    </div>
-  `).join('');
+  if (container) container.innerHTML = '<div class="report-empty">No pending tasks.</div>';
 }
-
-// Dummy other operations loader (replace with real API if available)
 function loadOtherOps() {
   const container = document.getElementById('otherOps');
-  if (!container) return;
-  // Example data
-  const ops = [
-    { desc: 'Password changed', date: '2025-11-10' },
-    { desc: 'Logged in from new device', date: '2025-11-08' }
-  ];
-  if (!ops.length) {
-    container.innerHTML = '<div class="report-empty">No other operations found.</div>';
-    return;
-  }
-  container.innerHTML = ops.map(o => `
-    <div class="report-other-op-card">
-      <div class="op-desc">${o.desc}</div>
-      <div class="op-date">${o.date}</div>
-    </div>
-  `).join('');
+  if (container) container.innerHTML = '<div class="report-empty">No other operations found.</div>';
 }
 
 async function loadLeaveReports() {
@@ -1411,3 +1389,197 @@ async function doCheckOut() {
     alert('Server error');
   }
 }
+
+// --- Clock Out Confirmation Modal ---
+async function showClockOutConfirmation(onConfirm) {
+  let modal = document.getElementById('clockOutConfirmModal');
+
+  // Fetch current status to check duration
+  let isEarly = false;
+  let durationMsg = 'Are you sure you want to end your shift for today?';
+  let warningClass = '';
+
+  try {
+    const user = JSON.parse(localStorage.getItem('nxt_user'));
+    if (user && user.empId) {
+      const res = await fetch(`${API_BASE}/api/attendance/status/${user.empId}`, { headers: authHeaders() });
+      const data = await res.json();
+      if (data.checkIn) {
+        const checkInTime = new Date(data.checkIn);
+        const now = new Date();
+        const diffHours = (now - checkInTime) / (1000 * 60 * 60);
+        if (diffHours < 8) {
+          isEarly = true;
+          durationMsg = `
+                  <div style="background:#fef2f2; border:1px solid #fecaca; padding:10px; border-radius:8px; margin-bottom:1rem; color:#b91c1c; font-size:0.95rem;">
+                     <strong><i class="fas fa-exclamation-triangle"></i> Early Departure Warning</strong><br>
+                     You have worked less than 8 hours (${diffHours.toFixed(1)} hrs).<br>
+                     Leaving early twice in a month will result in being marked <strong>ABSENT</strong>.
+                  </div>
+                  Are you sure you want to clock out now?
+                `;
+          warningClass = 'warning-mode';
+        }
+      }
+    }
+  } catch (e) { console.error(e); }
+
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'clockOutConfirmModal';
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10001; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px);';
+
+    modal.innerHTML = `
+      <div class="confirm-modal-content" style="background:#fff; padding:2rem; border-radius:16px; width:450px; max-width:90%; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.3); animation: scaleUp 0.3s ease;">
+        <div id="modalIcon" style="font-size:3rem; color:#f59e0b; margin-bottom:1rem;"><i class="fas fa-exclamation-circle"></i></div>
+        <h2 style="margin-bottom:0.5rem; color:#1e293b;">Confirm Clock Out</h2>
+        <div id="modalMsg" style="color:#64748b; margin-bottom:2rem; font-size:1.05rem;">${durationMsg}</div>
+        <div style="display:flex; gap:1rem; justify-content:center;">
+          <button id="cancelClockOutBtn" style="padding:0.8rem 1.5rem; border:1px solid #cbd5e1; background:#fff; color:#475569; border-radius:8px; cursor:pointer; font-weight:600; transition:all 0.2s;">Cancel</button>
+          <button id="confirmClockOutBtn" style="padding:0.8rem 1.5rem; border:none; background:#ef4444; color:#fff; border-radius:8px; cursor:pointer; font-weight:600; box-shadow:0 4px 12px rgba(239,68,68,0.3);">Yes, Clock Out</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    if (!document.getElementById('scaleUpStyle')) {
+      const s = document.createElement('style');
+      s.id = 'scaleUpStyle';
+      s.textContent = `@keyframes scaleUp { from { transform:scale(0.9); opacity:0; } to { transform:scale(1); opacity:1; } }`;
+      document.head.appendChild(s);
+    }
+  } else {
+    // Update existing modal content dynamically
+    const msgEl = modal.querySelector('#modalMsg');
+    if (msgEl) msgEl.innerHTML = durationMsg;
+  }
+
+  modal.style.display = 'flex';
+
+  const confirmBtn = modal.querySelector('#confirmClockOutBtn');
+  const cancelBtn = modal.querySelector('#cancelClockOutBtn');
+
+  // Reset listeners
+  const newConfirm = confirmBtn.cloneNode(true);
+  confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+  const newCancel = cancelBtn.cloneNode(true);
+  cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+  newConfirm.onclick = () => {
+    modal.style.display = 'none';
+    if (onConfirm) onConfirm();
+  };
+
+  newCancel.onclick = () => {
+    modal.style.display = 'none';
+  };
+}
+
+
+
+// --- Recent Activity Loader ---
+async function loadRecentActivity() {
+  const listEl = document.getElementById('activityList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="padding:1rem; text-align:center; color:#64748b;">Loading activity...</div>';
+
+  try {
+    const res = await fetchWithAuth(`${API_BASE}/api/activity/my`);
+    if (!res.ok) throw new Error('Failed');
+    const activities = await res.json();
+
+    if (!activities.length) {
+      listEl.innerHTML = '<div style="padding:1rem; text-align:center; color:#64748b;">No recent activity found.</div>';
+      return;
+    }
+
+    listEl.innerHTML = activities.map(item => `
+        <div class="activity-item">
+            <div class="activity-icon ${getActivityIconClass(item.type)}">
+                <i class="fas ${getActivityIcon(item.type)}"></i>
+            </div>
+            <div class="activity-details">
+                <h4>${item.title}</h4>
+                <p>${item.details}</p>
+            </div>
+            <div class="activity-time">
+                ${timeAgo(new Date(item.timestamp))}
+                ${getStatusBadge(item.status)}
+            </div>
+        </div>
+    `).join('');
+
+  } catch (err) {
+    console.error('Activity Error', err);
+    listEl.innerHTML = '<div style="padding:1rem; text-align:center; color:#ef4444;">Unable to load activity.</div>';
+  }
+}
+
+function getActivityIconClass(type) {
+  switch (type) {
+    case 'attendance_in': return 'bg-green-light text-green';
+    case 'attendance_out': return 'bg-blue-light text-blue';
+    case 'leave': return 'bg-yellow-light text-yellow';
+    case 'resignation': return 'bg-red-light text-red';
+    default: return 'bg-gray-light text-gray';
+  }
+}
+
+function getActivityIcon(type) {
+  switch (type) {
+    case 'attendance_in': return 'fa-sign-in-alt';
+    case 'attendance_out': return 'fa-sign-out-alt';
+    case 'leave': return 'fa-calendar-minus';
+    case 'resignation': return 'fa-file-signature';
+    default: return 'fa-bell';
+  }
+}
+
+function getStatusBadge(status) {
+  if (!status) return '';
+  let color = 'gray';
+  if (['present', 'approved', 'completed'].includes(status)) color = 'success-color';
+  if (['late', 'pending'].includes(status)) color = 'warning-color';
+  if (['absent', 'rejected'].includes(status)) color = 'danger-color';
+  return `<div style="font-size:0.75rem; color:var(--${color}); font-weight:600; margin-top:0.2rem;">${status.toUpperCase()}</div>`;
+}
+
+function timeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + "y ago";
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + "mo ago";
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + "d ago";
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + "h ago";
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + "m ago";
+  return Math.floor(seconds) + "s ago";
+}
+
+/* ================= MOUSE GLOW EFFECT ================= */
+(function initMouseGlow() {
+  const glow = document.createElement('div');
+  glow.classList.add('mouse-glow');
+  document.body.appendChild(glow);
+
+  let mouseX = 0, mouseY = 0;
+  let currentX = 0, currentY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  function animate() {
+    currentX += (mouseX - currentX) * 0.1;
+    currentY += (mouseY - currentY) * 0.1;
+
+    glow.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%)`;
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();

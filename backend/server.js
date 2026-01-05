@@ -1,3 +1,4 @@
+// Server Entry Point - Updated to force restart
 require('dotenv').config();
 const path = require('path');
 const express = require('express');
@@ -21,6 +22,19 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/nxtsync';
 // Connect DB
 connectDB(MONGO_URI);
 
+// FIX: Drop legacy index that causes duplicate key errors (employeeId: null)
+const mongoose = require('mongoose');
+mongoose.connection.once('open', async () => {
+  try {
+    await mongoose.connection.collection('attendances').dropIndex('employeeId_1_date_1');
+    console.log('Dropped legacy index: employeeId_1_date_1');
+  } catch (e) {
+    // Index might not exist, ignore
+    console.log('Legacy index check: ', e.message);
+  }
+});
+
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -39,6 +53,9 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/leaves', leaveRoutes);
 const resignationRoutes = require('./routes/resignations');
 app.use('/api/resignations', resignationRoutes);
+
+const activityRoutes = require('./routes/activity');
+app.use('/api/activity', activityRoutes);
 
 // Fallback: serve index.html for SPA-like behavior (optional)
 app.get('*', (req, res) => {

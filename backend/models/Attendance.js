@@ -5,7 +5,7 @@ const AttendanceSchema = new mongoose.Schema({
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
   empId: { type: String, required: true },
   date: { type: Date, required: true },
-  status: { type: String, enum: ['present','absent','onleave','remote'], default: 'present' },
+  status: { type: String, enum: ['present', 'absent', 'onleave', 'remote', 'late'], default: 'present' },
   checkIn: { type: Date },
   checkOut: { type: Date },
   workingHours: { type: Number },
